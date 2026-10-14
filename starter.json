@@ -1,0 +1,47 @@
+{
+  "admin": {
+    "UINWXl6eWaZlA2veiAjsGppVg173": {
+      "username": "admin"
+    }
+  },
+  "staff": {
+    "PASTE_STAFF_UID": {
+      "adminId": "UINWXl6eWaZlA2veiAjsGppVg173",
+      "firstname": "James",
+      "middlename": "Z.",
+      "lastname": "Stevhan",
+      "email": "staff@example.com",
+      "staff_username": "james.stevhan"
+    }
+  },
+  "student": {
+    "S001": {
+      "adminId": "UINWXl6eWaZlA2veiAjsGppVg173",
+      "firstname": "Bin Jamal",
+      "middlename": "B.",
+      "lastname": "Abduljalel",
+      "student_idnum": "202210494"
+    }
+  },
+  "laptop": {
+    "L001": {
+      "adminId": "UINWXl6eWaZlA2veiAjsGppVg173",
+      "staffId": "PASTE_STAFF_UID",
+      "studentId": "S001",
+      "serial_number": "B6SD3B3",
+      "processor_type": "i5"
+    }
+  },
+  "agent": {
+    "L001": {
+      "laptopId": "L001",
+      "ssid": "MSU-WiFi",
+      "bssid": "aa:bb:cc:dd:ee:ff",
+      "location": "Library",
+      "ip_address": "10.0.0.25",
+      "default_gateway": "10.0.0.1",
+      "connection_status": "online",
+      "timestamp": "2026-10-14T16:30:00+08:00"
+    }
+  }
+}

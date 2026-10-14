@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | Laptop Monitoring</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f1f4f8;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: #1f2933;
+    }
+    .card {
+      width: 100%;
+      max-width: 380px;
+      margin: 16px;
+      padding: 32px 28px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+    }
+    h1 { margin: 0 0 4px; font-size: 22px; }
+    p.sub { margin: 0 0 24px; color: #52606d; font-size: 14px; }
+    label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 600; }
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      margin-bottom: 16px;
+      border: 1px solid #cbd2d9;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+    input:focus { outline: 2px solid #2f6fed; border-color: #2f6fed; }
+    button {
+      width: 100%;
+      padding: 11px;
+      border: none;
+      border-radius: 8px;
+      background: #2f6fed;
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled { background: #9db8f2; cursor: not-allowed; }
+    #message { min-height: 20px; margin-top: 14px; font-size: 14px; color: #c0392b; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Laptop Connectivity Monitoring</h1>
+    <p class="sub">ICTC Office login</p>
+
+    <form id="loginForm">
+      <label for="email">Email</label>
+      <input type="email" id="email" autocomplete="username" required>
+
+      <label for="password">Password</label>
+      <input type="password" id="password" autocomplete="current-password" required>
+
+      <button type="submit" id="loginBtn">Log in</button>
+    </form>
+
+    <div id="message"></div>
+  </div>
+
+  <script type="module">
+    import { auth } from "./firebase-config.js";
+    import {
+      signInWithEmailAndPassword,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+
+    const form = document.getElementById("loginForm");
+    const message = document.getElementById("message");
+    const button = document.getElementById("loginBtn");
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.href = "dashboard.html";
+      }
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      message.textContent = "";
+      button.disabled = true;
+      button.textContent = "Logging in...";
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        window.location.href = "dashboard.html";
+      } catch (error) {
+        console.error(error);
+        if (error.code === "auth/invalid-credential" ||
+            error.code === "auth/wrong-password" ||
+            error.code === "auth/user-not-found") {
+          message.textContent = "Wrong email or password.";
+        } else if (error.code === "auth/too-many-requests") {
+          message.textContent = "Too many attempts. Please wait a few minutes and try again.";
+        } else if (error.code === "auth/network-request-failed") {
+          message.textContent = "No internet connection.";
+        } else {
+          message.textContent = "Login failed: " + error.code;
+        }
+        button.disabled = false;
+        button.textContent = "Log in";
+      }
+    });
+  </script>
+</body>
+</html>
