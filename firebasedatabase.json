@@ -1,32 +1,32 @@
 {
   "admin": {
-    "PASTE_ADMIN_UID": {
+    "UINWXl6eWaZlA2veiAjsGppVg173": {
       "username": "admin"
     }
   },
   "staff": {
-    "PASTE_STAFF_UID": {
-      "adminId": "PASTE_ADMIN_UID",
-      "firstname": "Juan",
-      "middlename": "D.",
-      "lastname": "Cruz",
-      "email": "staff@example.com",
-      "staff_username": "juan.cruz"
+    "mEBmIRUix7cY2w9TdsZ8vDZFvXH3": {
+      "adminId": "UINWXl6eWaZlA2veiAjsGppVg173",
+      "firstname": "James",
+      "middlename": "Sexy",
+      "lastname": "Stevhan",
+      "email": "abduljalel.bb494@s.msuamain.edu.ph",
+      "staff_username": "james.stevhan"
     }
   },
   "student": {
     "S001": {
-      "adminId": "PASTE_ADMIN_UID",
-      "firstname": "Ana",
-      "middlename": "R.",
-      "lastname": "Santos",
-      "student_idnum": "2022-00123"
+      "adminId": "UINWXl6eWaZlA2veiAjsGppVg173",
+      "firstname": "Mohammad Rayan",
+      "middlename": "M",
+      "lastname": "Abdullah",
+      "student_idnum": "202210494"
     }
   },
   "laptop": {
     "L001": {
-      "adminId": "PASTE_ADMIN_UID",
-      "staffId": "PASTE_STAFF_UID",
+      "adminId": "UINWXl6eWaZlA2veiAjsGppVg173",
+      "staffId": "mEBmIRUix7cY2w9TdsZ8vDZFvXH3",
       "studentId": "S001",
       "serial_number": "SN-ABC123",
       "processor_type": "i5"
@@ -42,6 +42,12 @@
       "default_gateway": "10.0.0.1",
       "connection_status": "online",
       "timestamp": "2026-10-14T16:30:00+08:00"
+    }
+  },
+  "router": {
+    "R001": {
+      "bssid": "aa:bb:cc:dd:ee:ff",
+      "location": "Library"
     }
   }
 }

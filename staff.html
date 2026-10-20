@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Staff | Laptop Monitoring</title>
+  <link rel="stylesheet" href="dashboard-styles.css">
+  <style>
+    /* ---------- Page layout: fill the whole screen ---------- */
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 20px 24px;
+    }
+    #content:not([hidden]) {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .list-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 280px;
+    }
+    .list-panel .table-wrap { flex: 1; }
+    /* make sure nothing in dashboard-styles.css keeps these narrow */
+    .panel, .legend {
+      width: 100%;
+      max-width: none;
+      margin-left: 0;
+      margin-right: 0;
+      box-sizing: border-box;
+    }
+
+    /* ---------- Clock in the top banner ---------- */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .clock { text-align: right; margin-left: auto; }
+    .clock-time {
+      font-size: 20px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+    }
+    .clock-date { font-size: 13px; opacity: 0.85; }
+
+    /* ---------- Account bar ---------- */
+    .userbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      width: 100%;
+      margin-bottom: 20px;
+      padding: 14px 20px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+      box-sizing: border-box;
+    }
+    .userbar-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .userbar-actions button {
+      padding: 9px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      border: 1px solid #cbd2d9;
+      border-radius: 8px;
+      background: #ffffff;
+      cursor: pointer;
+    }
+    .userbar-actions button:hover { background: #f1f4f8; }
+    .userbar-actions button.primary {
+      border-color: #2f6fed;
+      background: #2f6fed;
+      color: #ffffff;
+    }
+    .userbar-actions button.primary:hover { background: #2559c9; }
+    .userbar-who { text-align: left; }
+    .userbar-name { font-size: 16px; font-weight: 700; }
+    .userbar-role { margin-top: 2px; font-size: 13px; color: #52606d; }
+
+    /* ---------- Search + table ---------- */
+    .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+    #search {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid #cbd2d9;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+    #search:focus { outline: 2px solid #2f6fed; border-color: #2f6fed; }
+    #resultCount { font-size: 13px; color: #52606d; white-space: nowrap; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e4e7eb; }
+    th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: #52606d; }
+    th.action-col, td.action-col { text-align: right; width: 1%; white-space: nowrap; }
+    tbody tr:hover { background: #f7f9fc; }
+    .empty { padding: 24px; text-align: center; color: #52606d; }
+
+    /* ---------- Row buttons ---------- */
+    .row-btn {
+      padding: 4px 12px;
+      margin-left: 6px;
+      font-size: 13px;
+      border: 1px solid #cbd2d9;
+      border-radius: 6px;
+      background: #ffffff;
+      cursor: pointer;
+    }
+    .row-btn:hover { background: #f1f4f8; }
+    .row-btn.danger { color: #c0392b; border-color: #e8b9b3; }
+    .row-btn.danger:hover { background: #fdf0ee; }
+
+    /* ---------- Pop-up box ---------- */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 100;
+    }
+    .modal-backdrop[hidden] { display: none; }
+    .modal {
+      width: 100%;
+      max-width: 460px;
+      max-height: 90vh;
+      overflow-y: auto;
+      margin: 16px;
+      padding: 24px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+    }
+    .modal h2 { margin: 0 0 16px; font-size: 18px; }
+    .modal label { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 600; }
+    .modal input {
+      width: 100%;
+      padding: 9px 11px;
+      margin-bottom: 12px;
+      border: 1px solid #cbd2d9;
+      border-radius: 8px;
+      font-size: 15px;
+      box-sizing: border-box;
+    }
+    .modal input:focus { outline: 2px solid #2f6fed; border-color: #2f6fed; }
+    .modal input:disabled { background: #f1f4f8; color: #52606d; }
+    .hint {
+      margin: -6px 0 14px;
+      font-size: 12px;
+      color: #52606d;
+      line-height: 1.5;
+    }
+    .modal-error { min-height: 18px; margin-bottom: 8px; font-size: 13px; color: #c0392b; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+    .modal-actions button {
+      padding: 8px 16px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: 1px solid #cbd2d9;
+      background: #ffffff;
+      cursor: pointer;
+    }
+    .modal-actions button.primary {
+      border-color: #2f6fed;
+      background: #2f6fed;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .modal-actions button.danger {
+      border-color: #e74c3c;
+      background: #e74c3c;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .modal-actions button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ---------- Bottom banner ---------- */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 28px;
+      margin-top: 20px;
+      padding: 14px 20px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+      font-size: 14px;
+    }
+    .legend-title { font-weight: 700; color: #52606d; }
+    .legend #logoutBtn {
+      margin-left: auto;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      border: 1px solid #cbd2d9;
+      border-radius: 8px;
+      background: #ffffff;
+      color: inherit;
+      cursor: pointer;
+    }
+    .legend #logoutBtn:hover { background: #f1f4f8; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Manage Staff</h1>
+    <div class="clock">
+      <div class="clock-time" id="clockTime">--:--:--</div>
+      <div class="clock-date" id="clockDate"></div>
+    </div>
+  </header>
+
+  <main>
+    <div class="panel" id="statusPanel">
+      <p id="status">Checking your account...</p>
+      <button type="button" id="logoutBtnTop">Log out</button>
+    </div>
+
+    <div id="content" hidden>
+      <!-- Account bar: who is logged in on the left, buttons on the right -->
+      <div class="userbar">
+        <div class="userbar-who">
+          <div class="userbar-name" id="barName"></div>
+          <div class="userbar-role" id="barRole"></div>
+        </div>
+        <div class="userbar-actions">
+          <button type="button" id="backBtn">Back to Dashboard</button>
+          <button type="button" id="addStaffBtn" class="primary">Add Staff</button>
+        </div>
+      </div>
+
+      <div class="panel list-panel">
+        <div class="toolbar">
+          <input type="search" id="search" placeholder="Search by name, email, or username...">
+          <span id="resultCount"></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Username</th>
+                <th class="action-col"></th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span class="legend-title">Staff accounts</span>
+        <span>Only the admin can add, edit or remove staff.</span>
+        <button type="button" id="logoutBtn">Log out</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add / Edit staff pop-up -->
+  <div class="modal-backdrop" id="staffModal" hidden>
+    <form class="modal" id="staffForm">
+      <h2 id="modalTitle">Add Staff</h2>
+
+      <label for="fUid">Firebase User UID</label>
+      <input type="text" id="fUid" required>
+      <p class="hint" id="uidHint">
+        Create the login first in Firebase Console &rarr; Authentication &rarr; Users &rarr;
+        Add user, then copy the User UID and paste it here.
+      </p>
+
+      <label for="fFirst">First name</label>
+      <input type="text" id="fFirst" required>
+
+      <label for="fMiddle">Middle name</label>
+      <input type="text" id="fMiddle">
+
+      <label for="fLast">Last name</label>
+      <input type="text" id="fLast" required>
+
+      <label for="fEmail">Email</label>
+      <input type="email" id="fEmail" required>
+
+      <label for="fUsername">Username</label>
+      <input type="text" id="fUsername" required>
+
+      <div class="modal-error" id="formError"></div>
+
+      <div class="modal-actions">
+        <button type="button" id="formCancel">Cancel</button>
+        <button type="submit" class="primary" id="formSave">Save</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Delete confirmation pop-up -->
+  <div class="modal-backdrop" id="deleteModal" hidden>
+    <div class="modal">
+      <h2>Remove Staff</h2>
+      <p id="deleteText"></p>
+      <div class="modal-error" id="deleteError"></div>
+      <div class="modal-actions">
+        <button type="button" id="deleteCancel">Cancel</button>
+        <button type="button" class="danger" id="deleteConfirm">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from "./firebase-config.js";
+    import {
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+    import {
+      ref, get, set, update, remove, onValue
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+
+    const statusEl = document.getElementById("status");
+    const statusPanel = document.getElementById("statusPanel");
+    const contentEl = document.getElementById("content");
+    const searchEl = document.getElementById("search");
+    const tableBody = document.getElementById("tableBody");
+    const resultCountEl = document.getElementById("resultCount");
+
+    let adminUid = null;     // the admin who is logged in
+    let staffList = {};      // everything under staff/ in the database
+
+    // ---------- Live clock ----------
+    const clockTimeEl = document.getElementById("clockTime");
+    const clockDateEl = document.getElementById("clockDate");
+
+    function tickClock() {
+      const now = new Date();
+      clockTimeEl.textContent = now.toLocaleTimeString([], {
+        hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true
+      });
+      clockDateEl.textContent = now.toLocaleDateString([], {
+        weekday: "long", year: "numeric", month: "long", day: "numeric"
+      });
+    }
+    tickClock();
+    setInterval(tickClock, 1000);
+
+    // ---------- Log out ----------
+    async function logout() {
+      await signOut(auth);
+      window.location.href = "index.html";
+    }
+    document.getElementById("logoutBtn").addEventListener("click", logout);
+    document.getElementById("logoutBtnTop").addEventListener("click", logout);
+
+    document.getElementById("backBtn").addEventListener("click", () => {
+      window.location.href = "dashboard.html";
+    });
+
+    async function readOrNull(path) {
+      try {
+        const snapshot = await get(ref(db, path));
+        return snapshot.exists() ? snapshot.val() : null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function joinName(record, fallback) {
+      const parts = [record.firstname, record.middlename, record.lastname].filter(Boolean);
+      return parts.length ? parts.join(" ") : (fallback || "");
+    }
+
+    // ---------- The table ----------
+    function updateTable() {
+      const text = searchEl.value.trim().toLowerCase();
+      const ids = Object.keys(staffList);
+
+      const shown = ids.filter((uid) => {
+        if (!text) return true;
+        const person = staffList[uid];
+        const haystack = (joinName(person, "") + " " +
+          (person.email || "") + " " + (person.staff_username || "")).toLowerCase();
+        return haystack.includes(text);
+      });
+
+      shown.sort((a, b) => joinName(staffList[a], "").localeCompare(joinName(staffList[b], "")));
+
+      tableBody.textContent = "";
+
+      if (shown.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 4;
+        td.className = "empty";
+        td.textContent = ids.length === 0
+          ? "No staff accounts yet. Click Add Staff to create one."
+          : "No matching staff found.";
+        tr.appendChild(td);
+        tableBody.appendChild(tr);
+      }
+
+      shown.forEach((uid) => {
+        const person = staffList[uid];
+        const tr = document.createElement("tr");
+
+        [joinName(person, "(no name)"), person.email || "-", person.staff_username || "-"]
+          .forEach((value) => {
+            const td = document.createElement("td");
+            td.textContent = value;
+            tr.appendChild(td);
+          });
+
+        const actionTd = document.createElement("td");
+        actionTd.className = "action-col";
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "row-btn";
+        editBtn.textContent = "Edit";
+        editBtn.addEventListener("click", () => openForm(uid));
+        actionTd.appendChild(editBtn);
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.className = "row-btn danger";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.addEventListener("click", () => openDelete(uid));
+        actionTd.appendChild(deleteBtn);
+
+        tr.appendChild(actionTd);
+        tableBody.appendChild(tr);
+      });
+
+      resultCountEl.textContent = "Showing " + shown.length + " of " + ids.length;
+    }
+
+    searchEl.addEventListener("input", updateTable);
+
+    // ---------- Add / Edit pop-up ----------
+    const modalEl = document.getElementById("staffModal");
+    const formEl = document.getElementById("staffForm");
+    const titleEl = document.getElementById("modalTitle");
+    const uidEl = document.getElementById("fUid");
+    const uidHintEl = document.getElementById("uidHint");
+    const firstEl = document.getElementById("fFirst");
+    const middleEl = document.getElementById("fMiddle");
+    const lastEl = document.getElementById("fLast");
+    const emailEl = document.getElementById("fEmail");
+    const usernameEl = document.getElementById("fUsername");
+    const errorEl = document.getElementById("formError");
+    const saveBtn = document.getElementById("formSave");
+    let editingUid = null;   // null means we are adding a new one
+
+    function openForm(uid) {
+      editingUid = uid || null;
+      errorEl.textContent = "";
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save";
+
+      if (editingUid) {
+        const person = staffList[editingUid] || {};
+        titleEl.textContent = "Edit Staff";
+        uidEl.value = editingUid;
+        uidEl.disabled = true;          // the UID is the key, it cannot change
+        uidHintEl.hidden = true;
+        firstEl.value = person.firstname || "";
+        middleEl.value = person.middlename || "";
+        lastEl.value = person.lastname || "";
+        emailEl.value = person.email || "";
+        usernameEl.value = person.staff_username || "";
+      } else {
+        titleEl.textContent = "Add Staff";
+        uidEl.value = "";
+        uidEl.disabled = false;
+        uidHintEl.hidden = false;
+        formEl.reset();
+      }
+
+      modalEl.hidden = false;
+      (editingUid ? firstEl : uidEl).focus();
+    }
+
+    function closeForm() {
+      modalEl.hidden = true;
+      editingUid = null;
+    }
+
+    document.getElementById("addStaffBtn").addEventListener("click", () => openForm(null));
+    document.getElementById("formCancel").addEventListener("click", closeForm);
+    modalEl.addEventListener("click", (event) => {
+      if (event.target === modalEl) closeForm();
+    });
+
+    formEl.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const uid = uidEl.value.trim();
+      const firstname = firstEl.value.trim();
+      const middlename = middleEl.value.trim();
+      const lastname = lastEl.value.trim();
+      const email = emailEl.value.trim();
+      const username = usernameEl.value.trim();
+
+      if (!uid || !firstname || !lastname || !email || !username) {
+        errorEl.textContent = "Please fill in every box except the middle name.";
+        return;
+      }
+
+      // Adding: the UID must not already be used by another staff member
+      if (!editingUid && staffList[uid]) {
+        errorEl.textContent = "That UID already belongs to a staff member in the list.";
+        return;
+      }
+
+      // The same email should not be used twice
+      const duplicateEmail = Object.keys(staffList).some((id) =>
+        id !== (editingUid || uid) &&
+        String(staffList[id].email || "").toLowerCase() === email.toLowerCase()
+      );
+      if (duplicateEmail) {
+        errorEl.textContent = "That email already belongs to another staff member.";
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving...";
+      errorEl.textContent = "";
+
+      const record = {
+        adminId: adminUid,
+        firstname: firstname,
+        middlename: middlename,
+        lastname: lastname,
+        email: email,
+        staff_username: username
+      };
+
+      try {
+        if (editingUid) {
+          await update(ref(db, "staff/" + editingUid), record);
+        } else {
+          await set(ref(db, "staff/" + uid), record);
+        }
+        closeForm();   // the list refreshes by itself
+      } catch (error) {
+        console.error(error);
+        errorEl.textContent = String(error.code || error.message).includes("PERMISSION_DENIED")
+          ? "You do not have permission to change staff. Check the Firebase rules."
+          : "Could not save. Please try again.";
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save";
+      }
+    });
+
+    // ---------- Delete pop-up ----------
+    const deleteModalEl = document.getElementById("deleteModal");
+    const deleteTextEl = document.getElementById("deleteText");
+    const deleteErrorEl = document.getElementById("deleteError");
+    const deleteConfirmBtn = document.getElementById("deleteConfirm");
+    let deletingUid = null;
+
+    function openDelete(uid) {
+      deletingUid = uid;
+      const person = staffList[uid] || {};
+      deleteTextEl.textContent =
+        "Are you sure you want to delete " + joinName(person, "this staff member") +
+        " from the staff list? This cannot be undone.";
+      deleteErrorEl.textContent = "";
+      deleteConfirmBtn.disabled = false;
+      deleteConfirmBtn.textContent = "Remove";
+      deleteModalEl.hidden = false;
+    }
+
+    function closeDelete() {
+      deleteModalEl.hidden = true;
+      deletingUid = null;
+    }
+
+    document.getElementById("deleteCancel").addEventListener("click", closeDelete);
+    deleteModalEl.addEventListener("click", (event) => {
+      if (event.target === deleteModalEl) closeDelete();
+    });
+
+    deleteConfirmBtn.addEventListener("click", async () => {
+      if (!deletingUid) return;
+      deleteConfirmBtn.disabled = true;
+      deleteConfirmBtn.textContent = "Removing...";
+      try {
+        await remove(ref(db, "staff/" + deletingUid));
+        closeDelete();
+      } catch (error) {
+        console.error(error);
+        deleteErrorEl.textContent = String(error.code || error.message).includes("PERMISSION_DENIED")
+          ? "You do not have permission to remove staff. Check the Firebase rules."
+          : "Could not remove. Please try again.";
+        deleteConfirmBtn.disabled = false;
+        deleteConfirmBtn.textContent = "Remove";
+      }
+    });
+
+    // Press Esc to close whichever pop-up is open
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      if (!modalEl.hidden) closeForm();
+      if (!deleteModalEl.hidden) closeDelete();
+    });
+
+    // ---------- Who is logged in ----------
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "index.html";
+        return;
+      }
+
+      const adminData = await readOrNull("admin/" + user.uid);
+
+      // Only the admin may open this page
+      if (!adminData) {
+        statusEl.textContent = "This page is for the admin only. Sending you back to the dashboard...";
+        statusEl.className = "error";
+        setTimeout(() => { window.location.href = "dashboard.html"; }, 1500);
+        return;
+      }
+
+      adminUid = user.uid;
+      document.getElementById("barName").textContent =
+        joinName(adminData, adminData.username);
+      document.getElementById("barRole").textContent = "Admin Directory";
+
+      statusPanel.hidden = true;
+      contentEl.hidden = false;
+
+      // Listen to the database: the list updates by itself
+      onValue(ref(db, "staff"), (snap) => {
+        staffList = snap.val() || {};
+        updateTable();
+      });
+    });
+  </script>
+</body>
+</html>

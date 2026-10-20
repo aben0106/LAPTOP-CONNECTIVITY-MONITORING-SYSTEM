@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Router | Laptop Monitoring</title>
+  <link rel="stylesheet" href="dashboard-styles.css">
+  <style>
+    /* ---------- Page layout: fill the whole screen ---------- */
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 20px 24px;
+    }
+    #content:not([hidden]) {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .list-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 280px;
+    }
+    .list-panel .table-wrap { flex: 1; }
+    /* make sure nothing in dashboard-styles.css keeps these narrow */
+    .panel, .legend {
+      width: 100%;
+      max-width: none;
+      margin-left: 0;
+      margin-right: 0;
+      box-sizing: border-box;
+    }
+
+    /* ---------- Clock in the top banner ---------- */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .clock { text-align: right; margin-left: auto; }
+    .clock-time {
+      font-size: 20px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+    }
+    .clock-date { font-size: 13px; opacity: 0.85; }
+
+    /* ---------- Account bar ---------- */
+    .userbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      width: 100%;
+      margin-bottom: 20px;
+      padding: 14px 20px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+      box-sizing: border-box;
+    }
+    .userbar-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .userbar-actions button {
+      padding: 9px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      border: 1px solid #cbd2d9;
+      border-radius: 8px;
+      background: #ffffff;
+      cursor: pointer;
+    }
+    .userbar-actions button:hover { background: #f1f4f8; }
+    .userbar-actions button.primary {
+      border-color: #2f6fed;
+      background: #2f6fed;
+      color: #ffffff;
+    }
+    .userbar-actions button.primary:hover { background: #2559c9; }
+    .userbar-who { text-align: left; }
+    .userbar-name { font-size: 16px; font-weight: 700; }
+    .userbar-role { margin-top: 2px; font-size: 13px; color: #52606d; }
+
+    /* ---------- Search + table ---------- */
+    .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+    #search {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid #cbd2d9;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+    #search:focus { outline: 2px solid #2f6fed; border-color: #2f6fed; }
+    #resultCount { font-size: 13px; color: #52606d; white-space: nowrap; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e4e7eb; }
+    th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: #52606d; }
+    th.action-col, td.action-col { text-align: right; width: 1%; white-space: nowrap; }
+    td.mono { font-family: ui-monospace, Consolas, "Courier New", monospace; }
+    tbody tr:hover { background: #f7f9fc; }
+    .empty { padding: 24px; text-align: center; color: #52606d; }
+
+    /* ---------- Row buttons ---------- */
+    .row-btn {
+      padding: 4px 12px;
+      margin-left: 6px;
+      font-size: 13px;
+      border: 1px solid #cbd2d9;
+      border-radius: 6px;
+      background: #ffffff;
+      cursor: pointer;
+    }
+    .row-btn:hover { background: #f1f4f8; }
+    .row-btn.danger { color: #c0392b; border-color: #e8b9b3; }
+    .row-btn.danger:hover { background: #fdf0ee; }
+
+    /* ---------- Pop-up box ---------- */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 100;
+    }
+    .modal-backdrop[hidden] { display: none; }
+    .modal {
+      width: 100%;
+      max-width: 460px;
+      max-height: 90vh;
+      overflow-y: auto;
+      margin: 16px;
+      padding: 24px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+    }
+    .modal h2 { margin: 0 0 16px; font-size: 18px; }
+    .modal label { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 600; }
+    .modal input {
+      width: 100%;
+      padding: 9px 11px;
+      margin-bottom: 12px;
+      border: 1px solid #cbd2d9;
+      border-radius: 8px;
+      font-size: 15px;
+      box-sizing: border-box;
+    }
+    .modal input:focus { outline: 2px solid #2f6fed; border-color: #2f6fed; }
+    .hint {
+      margin: -6px 0 14px;
+      font-size: 12px;
+      color: #52606d;
+      line-height: 1.5;
+    }
+    .modal-error { min-height: 18px; margin-bottom: 8px; font-size: 13px; color: #c0392b; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+    .modal-actions button {
+      padding: 8px 16px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: 1px solid #cbd2d9;
+      background: #ffffff;
+      cursor: pointer;
+    }
+    .modal-actions button.primary {
+      border-color: #2f6fed;
+      background: #2f6fed;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .modal-actions button.danger {
+      border-color: #e74c3c;
+      background: #e74c3c;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .modal-actions button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ---------- Bottom banner ---------- */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 28px;
+      margin-top: 20px;
+      padding: 14px 20px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+      font-size: 14px;
+    }
+    .legend-title { font-weight: 700; color: #52606d; }
+    .legend #logoutBtn {
+      margin-left: auto;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      border: 1px solid #cbd2d9;
+      border-radius: 8px;
+      background: #ffffff;
+      color: inherit;
+      cursor: pointer;
+    }
+    .legend #logoutBtn:hover { background: #f1f4f8; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Manage Router</h1>
+    <div class="clock">
+      <div class="clock-time" id="clockTime">--:--:--</div>
+      <div class="clock-date" id="clockDate"></div>
+    </div>
+  </header>
+
+  <main>
+    <div class="panel" id="statusPanel">
+      <p id="status">Checking your account...</p>
+      <button type="button" id="logoutBtnTop">Log out</button>
+    </div>
+
+    <div id="content" hidden>
+      <!-- Account bar: who is logged in on the left, buttons on the right -->
+      <div class="userbar">
+        <div class="userbar-who">
+          <div class="userbar-name" id="barName"></div>
+          <div class="userbar-role" id="barRole"></div>
+        </div>
+        <div class="userbar-actions">
+          <button type="button" id="backBtn">Back to Dashboard</button>
+          <button type="button" id="addRouterBtn" class="primary">Add Router</button>
+        </div>
+      </div>
+
+      <div class="panel list-panel">
+        <div class="toolbar">
+          <input type="search" id="search" placeholder="Search by Wi-Fi name, location, or BSSID...">
+          <span id="resultCount"></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Wi-Fi Name (SSID)</th>
+                <th>Location</th>
+                <th>BSSID</th>
+                <th class="action-col"></th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span class="legend-title">University Wi-Fi routers</span>
+        <span>A laptop connected to a router on this list is shown as Online at that location.</span>
+        <button type="button" id="logoutBtn">Log out</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add router pop-up -->
+  <div class="modal-backdrop" id="routerModal" hidden>
+    <form class="modal" id="routerForm">
+      <h2>Add Router</h2>
+
+      <label for="fLocation">Location</label>
+      <input type="text" id="fLocation" placeholder="Library" required>
+
+      <label for="fBssid">BSSID</label>
+      <input type="text" id="fBssid" placeholder="aa:bb:cc:dd:ee:ff" required>
+      <p class="hint">
+        On a laptop connected to this Wi-Fi, run
+        <strong>netsh wlan show interfaces</strong> and copy the BSSID line.
+      </p>
+
+      <label for="fSsid">Wi-Fi name (SSID) - optional</label>
+      <input type="text" id="fSsid" placeholder="MSU-WiFi">
+
+      <div class="modal-error" id="formError"></div>
+
+      <div class="modal-actions">
+        <button type="button" id="formCancel">Cancel</button>
+        <button type="submit" class="primary" id="formSave">Save</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Delete confirmation pop-up -->
+  <div class="modal-backdrop" id="deleteModal" hidden>
+    <div class="modal">
+      <h2>Remove Router</h2>
+      <p id="deleteText"></p>
+      <p class="hint">
+        Laptops connected to this router will be shown as Away from the next
+        time they report in.
+      </p>
+      <div class="modal-error" id="deleteError"></div>
+      <div class="modal-actions">
+        <button type="button" id="deleteCancel">Cancel</button>
+        <button type="button" class="danger" id="deleteConfirm">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from "./firebase-config.js";
+    import {
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+    import {
+      ref, get, set, remove, onValue
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+
+    const statusEl = document.getElementById("status");
+    const statusPanel = document.getElementById("statusPanel");
+    const contentEl = document.getElementById("content");
+    const searchEl = document.getElementById("search");
+    const tableBody = document.getElementById("tableBody");
+    const resultCountEl = document.getElementById("resultCount");
+
+    let routers = {};   // everything under router/ in the database
+
+    // ---------- Live clock ----------
+    const clockTimeEl = document.getElementById("clockTime");
+    const clockDateEl = document.getElementById("clockDate");
+
+    function tickClock() {
+      const now = new Date();
+      clockTimeEl.textContent = now.toLocaleTimeString([], {
+        hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true
+      });
+      clockDateEl.textContent = now.toLocaleDateString([], {
+        weekday: "long", year: "numeric", month: "long", day: "numeric"
+      });
+    }
+    tickClock();
+    setInterval(tickClock, 1000);
+
+    // ---------- Log out ----------
+    async function logout() {
+      await signOut(auth);
+      window.location.href = "index.html";
+    }
+    document.getElementById("logoutBtn").addEventListener("click", logout);
+    document.getElementById("logoutBtnTop").addEventListener("click", logout);
+
+    document.getElementById("backBtn").addEventListener("click", () => {
+      window.location.href = "dashboard.html";
+    });
+
+    async function readOrNull(path) {
+      try {
+        const snapshot = await get(ref(db, path));
+        return snapshot.exists() ? snapshot.val() : null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function joinName(record, fallback) {
+      const parts = [record.firstname, record.middlename, record.lastname].filter(Boolean);
+      return parts.length ? parts.join(" ") : (fallback || "");
+    }
+
+    // Make every BSSID look the same: lowercase with colons (same as the agent)
+    function normalizeBssid(value) {
+      return String(value || "").trim().toLowerCase().replace(/-/g, ":");
+    }
+
+    // aa:bb:cc:dd:ee:ff -> six pairs of 0-9 a-f
+    function isValidBssid(value) {
+      return /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/.test(value);
+    }
+
+    // Work out the next router id: R001, R002, R003...
+    function nextRouterId() {
+      let biggest = 0;
+      Object.keys(routers).forEach((key) => {
+        const match = /^R(\d+)$/.exec(key);
+        if (match) biggest = Math.max(biggest, parseInt(match[1], 10));
+      });
+      return "R" + String(biggest + 1).padStart(3, "0");
+    }
+
+    // ---------- The table ----------
+    function updateTable() {
+      const text = searchEl.value.trim().toLowerCase();
+      const ids = Object.keys(routers);
+
+      const shown = ids.filter((id) => {
+        if (!text) return true;
+        const router = routers[id];
+        const haystack = ((router.ssid || "") + " " + (router.location || "") + " " +
+          (router.bssid || id)).toLowerCase();
+        return haystack.includes(text);
+      });
+
+      shown.sort((a, b) =>
+        String(routers[a].location || "").localeCompare(String(routers[b].location || "")));
+
+      tableBody.textContent = "";
+
+      if (shown.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 4;
+        td.className = "empty";
+        td.textContent = ids.length === 0
+          ? "No routers yet. Click Add Router to add the first one."
+          : "No matching routers found.";
+        tr.appendChild(td);
+        tableBody.appendChild(tr);
+      }
+
+      shown.forEach((id) => {
+        const router = routers[id];
+        const tr = document.createElement("tr");
+
+        const ssidTd = document.createElement("td");
+        ssidTd.textContent = router.ssid || "-";
+        tr.appendChild(ssidTd);
+
+        const locationTd = document.createElement("td");
+        locationTd.textContent = router.location || "-";
+        tr.appendChild(locationTd);
+
+        const bssidTd = document.createElement("td");
+        bssidTd.className = "mono";
+        bssidTd.textContent = router.bssid || id;
+        tr.appendChild(bssidTd);
+
+        const actionTd = document.createElement("td");
+        actionTd.className = "action-col";
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.className = "row-btn danger";
+        deleteBtn.textContent = "Delete";
+        deleteBtn.addEventListener("click", () => openDelete(id));
+        actionTd.appendChild(deleteBtn);
+        tr.appendChild(actionTd);
+
+        tableBody.appendChild(tr);
+      });
+
+      resultCountEl.textContent = "Showing " + shown.length + " of " + ids.length;
+    }
+
+    searchEl.addEventListener("input", updateTable);
+
+    // ---------- Add router pop-up ----------
+    const modalEl = document.getElementById("routerModal");
+    const formEl = document.getElementById("routerForm");
+    const locationEl = document.getElementById("fLocation");
+    const bssidEl = document.getElementById("fBssid");
+    const ssidEl = document.getElementById("fSsid");
+    const errorEl = document.getElementById("formError");
+    const saveBtn = document.getElementById("formSave");
+
+    function openForm() {
+      formEl.reset();
+      errorEl.textContent = "";
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save";
+      modalEl.hidden = false;
+      locationEl.focus();
+    }
+
+    function closeForm() {
+      modalEl.hidden = true;
+    }
+
+    document.getElementById("addRouterBtn").addEventListener("click", openForm);
+    document.getElementById("formCancel").addEventListener("click", closeForm);
+    modalEl.addEventListener("click", (event) => {
+      if (event.target === modalEl) closeForm();
+    });
+
+    formEl.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const location = locationEl.value.trim();
+      const bssid = normalizeBssid(bssidEl.value);
+      const ssid = ssidEl.value.trim();
+
+      if (!location || !bssid) {
+        errorEl.textContent = "Please fill in the location and the BSSID.";
+        return;
+      }
+      if (!isValidBssid(bssid)) {
+        errorEl.textContent = "The BSSID should look like aa:bb:cc:dd:ee:ff (six pairs).";
+        return;
+      }
+
+      // The same BSSID must not be added twice
+      const duplicate = Object.keys(routers).some((id) =>
+        normalizeBssid(routers[id].bssid || id) === bssid
+      );
+      if (duplicate) {
+        errorEl.textContent = "That BSSID is already in the list.";
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving...";
+      errorEl.textContent = "";
+
+      try {
+        await set(ref(db, "router/" + nextRouterId()), {
+          bssid: bssid,
+          location: location,
+          ssid: ssid
+        });
+        closeForm();   // the list refreshes by itself
+      } catch (error) {
+        console.error(error);
+        errorEl.textContent = String(error.code || error.message).includes("PERMISSION_DENIED")
+          ? "You do not have permission to add routers. Check the Firebase rules."
+          : "Could not save. Please try again.";
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save";
+      }
+    });
+
+    // ---------- Delete pop-up ----------
+    const deleteModalEl = document.getElementById("deleteModal");
+    const deleteTextEl = document.getElementById("deleteText");
+    const deleteErrorEl = document.getElementById("deleteError");
+    const deleteConfirmBtn = document.getElementById("deleteConfirm");
+    let deletingId = null;
+
+    function openDelete(id) {
+      deletingId = id;
+      const router = routers[id] || {};
+      deleteTextEl.textContent =
+        "Remove the router at " + (router.location || "this location") + "?";
+      deleteErrorEl.textContent = "";
+      deleteConfirmBtn.disabled = false;
+      deleteConfirmBtn.textContent = "Remove";
+      deleteModalEl.hidden = false;
+    }
+
+    function closeDelete() {
+      deleteModalEl.hidden = true;
+      deletingId = null;
+    }
+
+    document.getElementById("deleteCancel").addEventListener("click", closeDelete);
+    deleteModalEl.addEventListener("click", (event) => {
+      if (event.target === deleteModalEl) closeDelete();
+    });
+
+    deleteConfirmBtn.addEventListener("click", async () => {
+      if (!deletingId) return;
+      deleteConfirmBtn.disabled = true;
+      deleteConfirmBtn.textContent = "Removing...";
+      try {
+        await remove(ref(db, "router/" + deletingId));
+        closeDelete();
+      } catch (error) {
+        console.error(error);
+        deleteErrorEl.textContent = String(error.code || error.message).includes("PERMISSION_DENIED")
+          ? "You do not have permission to remove routers. Check the Firebase rules."
+          : "Could not remove. Please try again.";
+        deleteConfirmBtn.disabled = false;
+        deleteConfirmBtn.textContent = "Remove";
+      }
+    });
+
+    // Press Esc to close whichever pop-up is open
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      if (!modalEl.hidden) closeForm();
+      if (!deleteModalEl.hidden) closeDelete();
+    });
+
+    // ---------- Who is logged in ----------
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "index.html";
+        return;
+      }
+
+      // Admin and staff may both open this page
+      const adminData = await readOrNull("admin/" + user.uid);
+      const staffData = adminData ? null : await readOrNull("staff/" + user.uid);
+      const info = adminData
+        ? { role: "Admin", record: adminData, fallback: adminData.username }
+        : (staffData ? { role: "Staff", record: staffData, fallback: staffData.staff_username } : null);
+
+      if (!info) {
+        statusEl.textContent = "Your account has no role in the system yet. Please ask the admin to add you.";
+        statusEl.className = "error";
+        return;
+      }
+
+      document.getElementById("barName").textContent =
+        joinName(info.record, info.fallback);
+      document.getElementById("barRole").textContent = info.role + " Directory";
+
+      statusPanel.hidden = true;
+      contentEl.hidden = false;
+
+      // Listen to the database: the list updates by itself
+      onValue(ref(db, "router"), (snap) => {
+        routers = snap.val() || {};
+        updateTable();
+      });
+    });
+  </script>
+</body>
+</html>

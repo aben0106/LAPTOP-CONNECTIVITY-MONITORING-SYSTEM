@@ -4,66 +4,476 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard | Laptop Monitoring</title>
+  <link rel="stylesheet" href="dashboard-styles.css">
   <style>
-    * { box-sizing: border-box; }
+    /* ---------- Page layout: fill the whole screen ---------- */
     body {
-      margin: 0;
-      background: #f1f4f8;
-      font-family: "Segoe UI", Arial, sans-serif;
-      color: #1f2933;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 20px 24px;
+    }
+    /* the dashboard content stretches to the bottom of the screen */
+    #content:not([hidden]) {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    /* the list (with the search bar) takes all the free space between the cards and the legend */
+    .list-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 280px;
+    }
+    .list-panel .table-wrap { flex: 1; }
+    /* make sure nothing in dashboard-styles.css keeps these narrow */
+    .panel, .legend {
+      width: 100%;
+      max-width: none;
+      margin-left: 0;
+      margin-right: 0;
+      box-sizing: border-box;
+    }
+
+    /* ---------- KPI cards ---------- */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin: 0 auto 20px;   /* auto = the cards stay in the middle */
+      width: 100%;
+      max-width: 1100px;     /* the cards stay this narrow; change the number to resize them */
+    }
+    .card {
+      padding: 18px 20px;
+      background: #ffffff;
+      border-radius: 12px;
+      border-left: 6px solid #9aa5b1;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+      cursor: pointer;
+      text-align: left;
+      font: inherit;
+      color: inherit;
+    }
+    .card:hover { box-shadow: 0 6px 22px rgba(0, 0, 0, 0.12); }
+    .card.active { outline: 2px solid #2f6fed; }
+    .card.online.active  { outline-color: #27ae60; }
+    .card.away.active    { outline-color: #f39c12; }
+    .card.offline.active { outline-color: #e74c3c; }
+    .card .label { font-size: 13px; font-weight: 600; color: #52606d; }
+    .card .count { margin-top: 6px; font-size: 32px; font-weight: 700; }
+    .card.all     { border-left-color: #2f6fed; }
+    .card.online  { border-left-color: #27ae60; }
+    .card.away    { border-left-color: #f39c12; }
+    .card.offline { border-left-color: #e74c3c; }
+
+    /* ---------- Clock in the top banner ---------- */
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 24px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .clock { text-align: right; margin-left: auto; }
+    .clock-time {
+      font-size: 20px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;   /* stops the numbers from jiggling */
+      line-height: 1.2;
+    }
+    .clock-date { font-size: 13px; opacity: 0.85; }
+
+    /* ---------- Account bar (below the cards) ---------- */
+    .userbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      width: 100%;
+      margin-bottom: 20px;
+      padding: 14px 20px;
       background: #ffffff;
-      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+      box-sizing: border-box;
     }
-    header h1 { margin: 0; font-size: 18px; }
-    .user { display: flex; align-items: center; gap: 12px; font-size: 14px; }
-    .badge {
-      padding: 3px 10px;
-      border-radius: 999px;
-      background: #dbe7ff;
-      color: #1b4fc4;
-      font-size: 12px;
+    .userbar-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .userbar-actions button {
+      padding: 9px 16px;
+      font-size: 14px;
       font-weight: 600;
-    }
-    button {
-      padding: 8px 14px;
       border: 1px solid #cbd2d9;
       border-radius: 8px;
       background: #ffffff;
       cursor: pointer;
-      font-size: 14px;
     }
-    main { max-width: 900px; margin: 24px auto; padding: 0 16px; }
-    .panel {
+    .userbar-actions button:hover { background: #f1f4f8; }
+    .userbar-actions button.primary {
+      border-color: #2f6fed;
+      background: #2f6fed;
+      color: #ffffff;
+    }
+    .userbar-actions button.primary:hover { background: #2559c9; }
+    .userbar-who { text-align: left; }
+    .userbar-name { font-size: 16px; font-weight: 700; }
+    .userbar-role { margin-top: 2px; font-size: 13px; color: #52606d; }
+
+    /* ---------- Search + table ---------- */
+    .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+    #search {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid #cbd2d9;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+    #search:focus { outline: 2px solid #2f6fed; border-color: #2f6fed; }
+    #resultCount { font-size: 13px; color: #52606d; white-space: nowrap; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e4e7eb; }
+    th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: #52606d; }
+    th.action-col, td.action-col { text-align: right; width: 1%; white-space: nowrap; }
+    tbody tr:hover { background: #f7f9fc; }
+    .pill {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+    .pill.online  { background: #27ae60; }
+    .pill.away    { background: #f39c12; }
+    .pill.offline { background: #e74c3c; }
+    .empty { padding: 24px; text-align: center; color: #52606d; }
+
+    /* ---------- Edit button ---------- */
+    .edit-btn {
+      padding: 4px 12px;
+      font-size: 13px;
+      border: 1px solid #cbd2d9;
+      border-radius: 6px;
+      background: #ffffff;
+      cursor: pointer;
+    }
+    .edit-btn:hover { background: #f1f4f8; }
+    .edit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    /* the Delete button sits beside Edit */
+    .edit-btn.danger { margin-left: 6px; color: #c0392b; border-color: #e8b9b3; }
+    .edit-btn.danger:hover { background: #fdf0ee; }
+
+    /* ---------- Edit pop-up ---------- */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 100;
+    }
+    .modal-backdrop[hidden] { display: none; }
+    .modal {
+      width: 100%;
+      max-width: 420px;
+      margin: 16px;
       padding: 24px;
       background: #ffffff;
       border-radius: 12px;
-      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
     }
-    #status { color: #52606d; }
-    .error { color: #c0392b; }
+    .modal h2 { margin: 0 0 16px; font-size: 18px; }
+    .modal label { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 600; }
+    .modal input {
+      width: 100%;
+      padding: 9px 11px;
+      margin-bottom: 12px;
+      border: 1px solid #cbd2d9;
+      border-radius: 8px;
+      font-size: 15px;
+      box-sizing: border-box;
+    }
+    .modal input:focus { outline: 2px solid #2f6fed; border-color: #2f6fed; }
+    /* the processor dropdown looks the same as the text boxes */
+    .modal select {
+      width: 100%;
+      padding: 9px 11px;
+      margin-bottom: 12px;
+      border: 1px solid #cbd2d9;
+      border-radius: 8px;
+      font-size: 15px;
+      background: #ffffff;
+      box-sizing: border-box;
+    }
+    .modal select:focus { outline: 2px solid #2f6fed; border-color: #2f6fed; }
+    /* small grey note under an input box */
+    .hint {
+      margin: -6px 0 14px;
+      font-size: 12px;
+      color: #52606d;
+      line-height: 1.5;
+    }
+    .modal-error { min-height: 18px; margin-bottom: 8px; font-size: 13px; color: #c0392b; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+    .modal-actions button {
+      padding: 8px 16px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: 1px solid #cbd2d9;
+      background: #ffffff;
+      cursor: pointer;
+    }
+    .modal-actions button.primary {
+      border-color: #2f6fed;
+      background: #2f6fed;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .modal-actions button.danger {
+      border-color: #e74c3c;
+      background: #e74c3c;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .modal-actions button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ---------- Legend banner (bottom of the dashboard) ---------- */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 28px;
+      margin-top: 20px;
+      padding: 14px 20px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+      font-size: 14px;
+    }
+    .legend-title { font-weight: 700; color: #52606d; }
+    /* the Log out button sits at the far right of the legend bar */
+    .legend #logoutBtn {
+      margin-left: auto;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      border: 1px solid #cbd2d9;
+      border-radius: 8px;
+      background: #ffffff;
+      color: inherit;
+      cursor: pointer;
+    }
+    .legend #logoutBtn:hover { background: #f1f4f8; }
+    .legend-item { display: flex; align-items: center; gap: 8px; }
+    .dot {
+      flex: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .dot.online  { background: #27ae60; }
+    .dot.away    { background: #f39c12; }
+    .dot.offline { background: #e74c3c; }
+
+    @media (max-width: 700px) {
+      .cards { grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>Laptop Connectivity Monitoring</h1>
-    <div class="user">
-      <span id="userName"></span>
-      <span class="badge" id="userRole" hidden></span>
-      <button id="logoutBtn">Log out</button>
+    <h1>MSU - Laptop Connectivity Monitoring</h1>
+    <div class="clock">
+      <div class="clock-time" id="clockTime">--:--:--</div>
+      <div class="clock-date" id="clockDate"></div>
     </div>
   </header>
 
   <main>
-    <div class="panel">
+    <div class="panel" id="statusPanel">
       <p id="status">Checking your account...</p>
+      <!-- a way out for someone whose account has no role yet -->
+      <button type="button" id="logoutBtnTop">Log out</button>
+    </div>
+
+    <div id="content" hidden>
+      <!-- Four KPI cards. Click one to filter the list by that status. -->
+      <div class="cards">
+        <button class="card all active" data-filter="all">
+          <div class="label">All Devices</div>
+          <div class="count" id="countAll">0</div>
+        </button>
+        <button class="card online" data-filter="online">
+          <div class="label">Online</div>
+          <div class="count" id="countOnline">0</div>
+        </button>
+        <button class="card away" data-filter="away">
+          <div class="label">Away</div>
+          <div class="count" id="countAway">0</div>
+        </button>
+        <button class="card offline" data-filter="offline">
+          <div class="label">Offline</div>
+          <div class="count" id="countOffline">0</div>
+        </button>
+      </div>
+
+      <!-- Account bar: who is logged in on the left, buttons on the right -->
+      <div class="userbar">
+        <div class="userbar-who">
+          <div class="userbar-name" id="barName"></div>
+          <div class="userbar-role" id="barRole"></div>
+        </div>
+        <div class="userbar-actions">
+          <button type="button" id="manageRoutersBtn">Manage Wi-fi Routers</button>
+          <button type="button" id="manageStaffBtn" hidden>Manage Staff</button>
+          <button type="button" id="addStudentBtn" class="primary">Add Student</button>
+        </div>
+      </div>
+
+      <div class="panel list-panel">
+        <div class="toolbar">
+          <input type="search" id="search" placeholder="Search by student name, ID number, or laptop serial number...">
+          <span id="resultCount"></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>ID Number</th>
+                <th>Laptop Serial</th>
+                <th>Status</th>
+                <th>Connected To</th>
+                <th>IP Address</th>
+                <th>Last Seen</th>
+                <th class="action-col"></th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Legend: what the status colors mean -->
+      <div class="legend">
+        <span class="legend-title">Legend</span>
+        <span class="legend-item">
+          <span class="dot online"></span>
+          Online - Connected to one of the university's Wi-Fi
+        </span>
+        <span class="legend-item">
+          <span class="dot away"></span>
+          Away - Online but outside campus
+        </span>
+        <span class="legend-item">
+          <span class="dot offline"></span>
+          Offline - No internet connection
+        </span>
+        <button type="button" id="logoutBtn">Log out</button>
+      </div>
     </div>
   </main>
+
+  <!-- Edit student pop-up -->
+  <div class="modal-backdrop" id="editModal" hidden>
+    <form class="modal" id="editForm">
+      <h2>Edit Student</h2>
+
+      <label for="editFirst">First name</label>
+      <input type="text" id="editFirst" required>
+
+      <label for="editMiddle">Middle name</label>
+      <input type="text" id="editMiddle">
+
+      <label for="editLast">Last name</label>
+      <input type="text" id="editLast" required>
+
+      <label for="editIdNum">ID number</label>
+      <input type="text" id="editIdNum" required>
+
+      <label for="editSerial">Laptop serial number</label>
+      <input type="text" id="editSerial" required>
+
+      <label for="editProcessor">Processor type</label>
+      <select id="editProcessor" required>
+        <option value="i3">i3</option>
+        <option value="i5">i5</option>
+        <option value="i7">i7</option>
+      </select>
+
+      <div class="modal-error" id="editError"></div>
+
+      <div class="modal-actions">
+        <button type="button" id="editCancel">Cancel</button>
+        <button type="submit" class="primary" id="editSave">Save</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Add student pop-up -->
+  <div class="modal-backdrop" id="addModal" hidden>
+    <form class="modal" id="addForm">
+      <h2>Add Student</h2>
+
+      <label for="addFirst">First name</label>
+      <input type="text" id="addFirst" required>
+
+      <label for="addMiddle">Middle name</label>
+      <input type="text" id="addMiddle">
+
+      <label for="addLast">Last name</label>
+      <input type="text" id="addLast" required>
+
+      <label for="addIdNum">Student ID number</label>
+      <input type="text" id="addIdNum" placeholder="2022-00123" required>
+
+      <label for="addSerial">Laptop serial number</label>
+      <input type="text" id="addSerial" placeholder="SN-ABC123" required>
+      <p class="hint">
+        Type <strong>wmic bios get serialnumber</strong> in CMD to get the serial number.
+      </p>
+
+      <label for="addProcessor">Processor type</label>
+      <select id="addProcessor" required>
+        <option value="i3">i3</option>
+        <option value="i5" selected>i5</option>
+        <option value="i7">i7</option>
+      </select>
+
+      <div class="modal-error" id="addError"></div>
+
+      <div class="modal-actions">
+        <button type="button" id="addCancel">Cancel</button>
+        <button type="submit" class="primary" id="addSave">Add Student</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Delete student confirmation pop-up -->
+  <div class="modal-backdrop" id="deleteModal" hidden>
+    <div class="modal">
+      <h2>Delete Student</h2>
+      <p id="deleteText"></p>
+      <div class="modal-error" id="deleteError"></div>
+      <div class="modal-actions">
+        <button type="button" id="deleteCancel">Cancel</button>
+        <button type="button" class="danger" id="deleteConfirm">Delete</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module">
     import { auth, db } from "./firebase-config.js";
@@ -71,16 +481,44 @@
       onAuthStateChanged,
       signOut
     } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-    import { ref, get } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+    import { ref, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+
+    // ---- SETTING ----
+    // If a laptop has not reported for this many minutes, we call it "offline"
+    // (a laptop that is turned off cannot send anything).
+    // Set to 0 to turn this rule off (useful when testing with the sample data).
+    const OFFLINE_AFTER_MINUTES = 2;
+    // -----------------
 
     const statusEl = document.getElementById("status");
-    const nameEl = document.getElementById("userName");
-    const roleEl = document.getElementById("userRole");
+    const statusPanel = document.getElementById("statusPanel");
+    const contentEl = document.getElementById("content");
+    const searchEl = document.getElementById("search");
+    const tableBody = document.getElementById("tableBody");
+    const resultCountEl = document.getElementById("resultCount");
 
-    document.getElementById("logoutBtn").addEventListener("click", async () => {
+    // ---------- Live clock in the top banner ----------
+    const clockTimeEl = document.getElementById("clockTime");
+    const clockDateEl = document.getElementById("clockDate");
+
+    function tickClock() {
+      const now = new Date();
+      clockTimeEl.textContent = now.toLocaleTimeString([], {
+        hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true
+      });
+      clockDateEl.textContent = now.toLocaleDateString([], {
+        weekday: "long", year: "numeric", month: "long", day: "numeric"
+      });
+    }
+    tickClock();
+    setInterval(tickClock, 1000);   // update every second
+
+    async function logout() {
       await signOut(auth);
       window.location.href = "index.html";
-    });
+    }
+    document.getElementById("logoutBtn").addEventListener("click", logout);
+    document.getElementById("logoutBtnTop").addEventListener("click", logout);
 
     async function readOrNull(path) {
       try {
@@ -91,16 +529,523 @@
       }
     }
 
+    // Put the name parts together, e.g. "Juan D. Cruz"
+    function joinName(record, fallback) {
+      const parts = [record.firstname, record.middlename, record.lastname].filter(Boolean);
+      return parts.length ? parts.join(" ") : (fallback || "");
+    }
+
     async function getRole(uid) {
       const adminData = await readOrNull("admin/" + uid);
       if (adminData) {
-        return { role: "Admin", name: adminData.username };
+        return {
+          role: "Admin",
+          name: adminData.username,
+          fullName: joinName(adminData, adminData.username),
+          adminId: uid            // the admin is their own admin
+        };
       }
       const staffData = await readOrNull("staff/" + uid);
       if (staffData) {
-        return { role: "Staff", name: staffData.firstname };
+        return {
+          role: "Staff",
+          name: staffData.firstname,
+          fullName: joinName(staffData, staffData.staff_username),
+          adminId: staffData.adminId || ""   // the admin who manages this staff
+        };
       }
       return null;
+    }
+
+    // ---------- Data ----------
+    let students = {};
+    let laptops = {};
+    let agents = {};
+    let rows = [];               // the combined list (one row per laptop)
+    let statusFilter = "all";    // all / online / away / offline
+    let me = null;               // who is logged in: { uid, role, adminId }
+
+    // Work out the status of one laptop from its agent record
+    function getStatus(agent) {
+      if (!agent) return "offline";
+      const saved = String(agent.connection_status || "").toLowerCase();
+      let status = (saved === "online" || saved === "away") ? saved : "offline";
+
+      if (OFFLINE_AFTER_MINUTES > 0 && agent.timestamp) {
+        const lastSeen = Date.parse(agent.timestamp);
+        const minutesAgo = (Date.now() - lastSeen) / 60000;
+        if (!isNaN(lastSeen) && minutesAgo > OFFLINE_AFTER_MINUTES) {
+          status = "offline";
+        }
+      }
+      return status;
+    }
+
+    function fullName(student) {
+      if (!student) return "(no student)";
+      return [student.firstname, student.middlename, student.lastname]
+        .filter(Boolean).join(" ");
+    }
+
+    function formatTime(timestamp) {
+      if (!timestamp) return "-";
+      const date = new Date(timestamp);
+      return isNaN(date) ? "-" : date.toLocaleString();
+    }
+
+    // Join laptop + student + agent into one list
+    function buildRows() {
+      rows = Object.keys(laptops).map((laptopId) => {
+        const laptop = laptops[laptopId];
+        const student = students[laptop.studentId];
+        const agent = agents[laptopId];
+        return {
+          laptopId: laptopId,                             // needed by the Edit button
+          studentId: student ? laptop.studentId : null,   // needed by the Edit button
+          name: fullName(student),
+          idNumber: student ? student.student_idnum : "-",
+          serial: laptop.serial_number || "-",
+          status: getStatus(agent),
+          connectedTo: agent ? (agent.ssid || agent.location || "-") : "-",
+          location: agent ? (agent.location || "") : "",
+          ip: agent ? (agent.ip_address || "-") : "-",
+          lastSeen: agent ? agent.timestamp : null
+        };
+      });
+      rows.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    // ---------- Drawing the page ----------
+    function updateCards() {
+      const counts = { online: 0, away: 0, offline: 0 };
+      rows.forEach((row) => counts[row.status]++);
+      document.getElementById("countAll").textContent = rows.length;
+      document.getElementById("countOnline").textContent = counts.online;
+      document.getElementById("countAway").textContent = counts.away;
+      document.getElementById("countOffline").textContent = counts.offline;
+    }
+
+    function updateTable() {
+      const text = searchEl.value.trim().toLowerCase();
+
+      const shown = rows.filter((row) => {
+        if (statusFilter !== "all" && row.status !== statusFilter) return false;
+        if (!text) return true;
+        const haystack = (row.name + " " + row.idNumber + " " + row.serial).toLowerCase();
+        return haystack.includes(text);
+      });
+
+      tableBody.textContent = "";
+
+      if (shown.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 8;
+        td.className = "empty";
+        td.textContent = rows.length === 0 ? "No laptops in the database yet." : "No matching laptops found.";
+        tr.appendChild(td);
+        tableBody.appendChild(tr);
+      }
+
+      shown.forEach((row) => {
+        const tr = document.createElement("tr");
+
+        const connected = row.location && row.connectedTo !== row.location
+          ? row.connectedTo + " (" + row.location + ")"
+          : row.connectedTo;
+
+        [row.name, row.idNumber, row.serial].forEach((value) => {
+          const td = document.createElement("td");
+          td.textContent = value;
+          tr.appendChild(td);
+        });
+
+        const statusTd = document.createElement("td");
+        const pill = document.createElement("span");
+        pill.className = "pill " + row.status;
+        pill.textContent = row.status.charAt(0).toUpperCase() + row.status.slice(1);
+        statusTd.appendChild(pill);
+        tr.appendChild(statusTd);
+
+        [connected, row.ip, formatTime(row.lastSeen)].forEach((value) => {
+          const td = document.createElement("td");
+          td.textContent = value;
+          tr.appendChild(td);
+        });
+
+        // Edit button on the far right of the row
+        const actionTd = document.createElement("td");
+        actionTd.className = "action-col";
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "edit-btn";
+        editBtn.textContent = "Edit";
+        if (row.studentId) {
+          editBtn.addEventListener("click", () => openEdit(row.studentId, row.laptopId));
+        } else {
+          editBtn.disabled = true;   // this laptop has no student to edit
+        }
+        actionTd.appendChild(editBtn);
+
+        // Delete button beside Edit
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.className = "edit-btn danger";
+        deleteBtn.textContent = "Delete";
+        if (row.studentId) {
+          deleteBtn.addEventListener("click", () => openDelete(row.studentId));
+        } else {
+          deleteBtn.disabled = true;   // this laptop has no student to delete
+        }
+        actionTd.appendChild(deleteBtn);
+
+        tr.appendChild(actionTd);
+
+        tableBody.appendChild(tr);
+      });
+
+      resultCountEl.textContent = "Showing " + shown.length + " of " + rows.length;
+    }
+
+    function refresh() {
+      buildRows();
+      updateCards();
+      updateTable();
+    }
+
+    // Account bar buttons
+    document.getElementById("manageRoutersBtn").addEventListener("click", () => {
+      window.location.href = "routerspage.html";
+    });
+    document.getElementById("manageStaffBtn").addEventListener("click", () => {
+      window.location.href = "staff.html";
+    });
+
+    // Search bar: update the list as the user types
+    searchEl.addEventListener("input", updateTable);
+
+    // KPI cards: click to filter by status
+    document.querySelectorAll(".card").forEach((card) => {
+      card.addEventListener("click", () => {
+        statusFilter = card.dataset.filter;
+        document.querySelectorAll(".card").forEach((c) => c.classList.remove("active"));
+        card.classList.add("active");
+        updateTable();
+      });
+    });
+
+    // ---------- Edit student pop-up ----------
+    const modalEl = document.getElementById("editModal");
+    const formEl = document.getElementById("editForm");
+    const firstEl = document.getElementById("editFirst");
+    const middleEl = document.getElementById("editMiddle");
+    const lastEl = document.getElementById("editLast");
+    const idNumEl = document.getElementById("editIdNum");
+    const serialEl = document.getElementById("editSerial");
+    const processorEl = document.getElementById("editProcessor");
+    const errorEl = document.getElementById("editError");
+    const saveBtn = document.getElementById("editSave");
+    let editingId = null;         // the student being edited
+    let editingLaptopId = null;   // their laptop on this row
+
+    function openEdit(studentId, laptopId) {
+      const student = students[studentId];
+      if (!student) return;
+      const laptop = laptops[laptopId] || {};
+      editingId = studentId;
+      editingLaptopId = laptopId;
+
+      firstEl.value = student.firstname || "";
+      middleEl.value = student.middlename || "";
+      lastEl.value = student.lastname || "";
+      idNumEl.value = student.student_idnum || "";
+      serialEl.value = laptop.serial_number || "";
+      // show the saved processor; fall back to i5 if it is blank or something else
+      processorEl.value = ["i3", "i5", "i7"].includes(laptop.processor_type)
+        ? laptop.processor_type
+        : "i5";
+
+      errorEl.textContent = "";
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save";
+      modalEl.hidden = false;
+      firstEl.focus();
+    }
+
+    function closeEdit() {
+      modalEl.hidden = true;
+      editingId = null;
+      editingLaptopId = null;
+    }
+
+    document.getElementById("editCancel").addEventListener("click", closeEdit);
+
+    // Click the dark area outside the box to close it
+    modalEl.addEventListener("click", (event) => {
+      if (event.target === modalEl) closeEdit();
+    });
+
+    // Press Esc to close whichever pop-up is open
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      if (!modalEl.hidden) closeEdit();
+      if (!addModalEl.hidden) closeAdd();
+      if (!deleteModalEl.hidden) closeDelete();
+    });
+
+    formEl.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!editingId) return;
+
+      const firstname = firstEl.value.trim();
+      const middlename = middleEl.value.trim();
+      const lastname = lastEl.value.trim();
+      const idnum = idNumEl.value.trim();
+      const serial = serialEl.value.trim();
+      const processor = processorEl.value;
+
+      if (!firstname || !lastname || !idnum || !serial) {
+        errorEl.textContent = "First name, last name, ID number and serial number are required.";
+        return;
+      }
+
+      // Do not allow two students with the same ID number
+      const duplicate = Object.keys(students).some((id) =>
+        id !== editingId && String(students[id].student_idnum || "").trim() === idnum
+      );
+      if (duplicate) {
+        errorEl.textContent = "That ID number already belongs to another student.";
+        return;
+      }
+
+      // Do not allow two laptops with the same serial number
+      const duplicateSerial = Object.keys(laptops).some((id) =>
+        id !== editingLaptopId &&
+        String(laptops[id].serial_number || "").trim().toLowerCase() === serial.toLowerCase()
+      );
+      if (duplicateSerial) {
+        errorEl.textContent = "That serial number already belongs to another laptop.";
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving...";
+      errorEl.textContent = "";
+
+      // Save the student details and the laptop details together, in one go
+      const changes = {
+        ["student/" + editingId + "/firstname"]: firstname,
+        ["student/" + editingId + "/middlename"]: middlename,
+        ["student/" + editingId + "/lastname"]: lastname,
+        ["student/" + editingId + "/student_idnum"]: idnum
+      };
+      if (editingLaptopId) {
+        changes["laptop/" + editingLaptopId + "/serial_number"] = serial;
+        changes["laptop/" + editingLaptopId + "/processor_type"] = processor;
+      }
+
+      try {
+        await update(ref(db), changes);
+        closeEdit();   // the list refreshes by itself when Firebase changes
+      } catch (error) {
+        console.error(error);
+        errorEl.textContent = String(error.code || error.message).includes("PERMISSION_DENIED")
+          ? "You do not have permission to edit students. Check the Firebase rules."
+          : "Could not save. Please try again.";
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save";
+      }
+    });
+
+    // ---------- Add student pop-up ----------
+    const addModalEl = document.getElementById("addModal");
+    const addFormEl = document.getElementById("addForm");
+    const addFirstEl = document.getElementById("addFirst");
+    const addMiddleEl = document.getElementById("addMiddle");
+    const addLastEl = document.getElementById("addLast");
+    const addIdNumEl = document.getElementById("addIdNum");
+    const addSerialEl = document.getElementById("addSerial");
+    const addProcessorEl = document.getElementById("addProcessor");
+    const addErrorEl = document.getElementById("addError");
+    const addSaveBtn = document.getElementById("addSave");
+
+    // Work out the next id, e.g. S001, S002... or L001, L002...
+    function nextId(existing, letter) {
+      let biggest = 0;
+      const pattern = new RegExp("^" + letter + "(\\d+)$");
+      Object.keys(existing).forEach((key) => {
+        const match = pattern.exec(key);
+        if (match) biggest = Math.max(biggest, parseInt(match[1], 10));
+      });
+      return letter + String(biggest + 1).padStart(3, "0");
+    }
+
+    function openAdd() {
+      addFormEl.reset();
+      addProcessorEl.value = "i5";
+      addErrorEl.textContent = "";
+      addSaveBtn.disabled = false;
+      addSaveBtn.textContent = "Add Student";
+      addModalEl.hidden = false;
+      addFirstEl.focus();
+    }
+
+    function closeAdd() {
+      addModalEl.hidden = true;
+    }
+
+    document.getElementById("addStudentBtn").addEventListener("click", openAdd);
+    document.getElementById("addCancel").addEventListener("click", closeAdd);
+    addModalEl.addEventListener("click", (event) => {
+      if (event.target === addModalEl) closeAdd();
+    });
+
+    addFormEl.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const firstname = addFirstEl.value.trim();
+      const middlename = addMiddleEl.value.trim();
+      const lastname = addLastEl.value.trim();
+      const idnum = addIdNumEl.value.trim();
+      const serial = addSerialEl.value.trim();
+      const processor = addProcessorEl.value;
+
+      if (!firstname || !lastname || !idnum || !serial) {
+        addErrorEl.textContent = "Please fill in every box except the middle name.";
+        return;
+      }
+
+      // Do not allow two students with the same ID number
+      const duplicateId = Object.keys(students).some((id) =>
+        String(students[id].student_idnum || "").trim() === idnum
+      );
+      if (duplicateId) {
+        addErrorEl.textContent = "That ID number already belongs to another student.";
+        return;
+      }
+
+      // Do not allow two laptops with the same serial number
+      const duplicateSerial = Object.keys(laptops).some((id) =>
+        String(laptops[id].serial_number || "").trim().toLowerCase() === serial.toLowerCase()
+      );
+      if (duplicateSerial) {
+        addErrorEl.textContent = "That serial number already belongs to another laptop.";
+        return;
+      }
+
+      addSaveBtn.disabled = true;
+      addSaveBtn.textContent = "Saving...";
+      addErrorEl.textContent = "";
+
+      const studentId = nextId(students, "S");
+      const laptopId = nextId(laptops, "L");
+
+      // Save the student and their laptop together, in one go
+      const changes = {};
+      changes["student/" + studentId] = {
+        adminId: me ? me.adminId : "",
+        firstname: firstname,
+        middlename: middlename,
+        lastname: lastname,
+        student_idnum: idnum
+      };
+      changes["laptop/" + laptopId] = {
+        adminId: me ? me.adminId : "",
+        staffId: (me && me.role === "Staff") ? me.uid : "",
+        studentId: studentId,
+        serial_number: serial,
+        processor_type: processor
+      };
+
+      try {
+        await update(ref(db), changes);
+        closeAdd();   // the list refreshes by itself
+      } catch (error) {
+        console.error(error);
+        addErrorEl.textContent = String(error.code || error.message).includes("PERMISSION_DENIED")
+          ? "You do not have permission to add students. Check the Firebase rules."
+          : "Could not save. Please try again.";
+        addSaveBtn.disabled = false;
+        addSaveBtn.textContent = "Add Student";
+      }
+    });
+
+    // ---------- Delete student pop-up ----------
+    const deleteModalEl = document.getElementById("deleteModal");
+    const deleteTextEl = document.getElementById("deleteText");
+    const deleteErrorEl = document.getElementById("deleteError");
+    const deleteConfirmBtn = document.getElementById("deleteConfirm");
+    let deletingId = null;   // the student being deleted
+
+    // Which laptops belong to this student?
+    function laptopsOf(studentId) {
+      return Object.keys(laptops).filter((id) => laptops[id].studentId === studentId);
+    }
+
+    function openDelete(studentId) {
+      const student = students[studentId];
+      if (!student) return;
+      deletingId = studentId;
+
+      const owned = laptopsOf(studentId);
+      let message = "Are you sure you want to delete " + fullName(student) +
+        " from the system? This cannot be undone.";
+      if (owned.length > 0) {
+        message += " Their laptop record" + (owned.length > 1 ? "s will" : " will") +
+          " be removed as well.";
+      }
+      deleteTextEl.textContent = message;
+
+      deleteErrorEl.textContent = "";
+      deleteConfirmBtn.disabled = false;
+      deleteConfirmBtn.textContent = "Delete";
+      deleteModalEl.hidden = false;
+    }
+
+    function closeDelete() {
+      deleteModalEl.hidden = true;
+      deletingId = null;
+    }
+
+    document.getElementById("deleteCancel").addEventListener("click", closeDelete);
+
+    // Click the dark area outside the box to close it
+    deleteModalEl.addEventListener("click", (event) => {
+      if (event.target === deleteModalEl) closeDelete();
+    });
+
+    deleteConfirmBtn.addEventListener("click", async () => {
+      if (!deletingId) return;
+      deleteConfirmBtn.disabled = true;
+      deleteConfirmBtn.textContent = "Deleting...";
+      deleteErrorEl.textContent = "";
+
+      // Remove the student and their laptops together, in one go
+      const changes = {};
+      changes["student/" + deletingId] = null;
+      laptopsOf(deletingId).forEach((id) => { changes["laptop/" + id] = null; });
+
+      try {
+        await update(ref(db), changes);
+        closeDelete();   // the list refreshes by itself
+      } catch (error) {
+        console.error(error);
+        deleteErrorEl.textContent = String(error.code || error.message).includes("PERMISSION_DENIED")
+          ? "You do not have permission to delete students. Check the Firebase rules."
+          : "Could not delete. Please try again.";
+        deleteConfirmBtn.disabled = false;
+        deleteConfirmBtn.textContent = "Delete";
+      }
+    });
+
+    // Re-check the "offline after X minutes" rule every 30 seconds
+    setInterval(refresh, 30000);
+
+    // Listen to the database: the page updates by itself when data changes
+    function startListening() {
+      onValue(ref(db, "student"), (snap) => { students = snap.val() || {}; refresh(); });
+      onValue(ref(db, "laptop"),  (snap) => { laptops  = snap.val() || {}; refresh(); });
+      onValue(ref(db, "agent"),   (snap) => { agents   = snap.val() || {}; refresh(); });
     }
 
     onAuthStateChanged(auth, async (user) => {
@@ -112,16 +1057,27 @@
       const info = await getRole(user.uid);
 
       if (!info) {
-        statusEl.textContent = "Your account has no role in the system yet. Please ask the admin to add you.";
+        statusEl.textContent = "Your account (" + user.email +
+          ") has no role in the system yet. Please ask the admin to add you.";
         statusEl.className = "error";
-        nameEl.textContent = user.email;
         return;
       }
 
-      nameEl.textContent = info.name;
-      roleEl.textContent = info.role;
-      roleEl.hidden = false;
-      statusEl.textContent = "Logged in as " + info.role + ". The laptop list and search bar come next.";
+      // Remember who is logged in (used when adding a student)
+      me = { uid: user.uid, role: info.role, adminId: info.adminId };
+
+      // Fill the account bar
+      document.getElementById("barName").textContent = info.fullName || info.name;
+      document.getElementById("barRole").textContent = info.role + " Directory";
+
+      // Only the admin can manage staff accounts
+      if (info.role === "Admin") {
+        document.getElementById("manageStaffBtn").hidden = false;
+      }
+
+      statusPanel.hidden = true;
+      contentEl.hidden = false;
+      startListening();
     });
   </script>
 </body>
