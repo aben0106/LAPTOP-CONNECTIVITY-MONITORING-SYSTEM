@@ -1038,8 +1038,15 @@
       }
     });
 
-    // Re-check the "offline after X minutes" rule every 30 seconds
-    setInterval(refresh, 30000);
+    // Re-check the "offline after X minutes" rule every 15 seconds,
+    // so a laptop that stops reporting turns Offline without refreshing the page.
+    setInterval(refresh, 15000);
+
+    // Browsers slow down timers in tabs you are not looking at.
+    // When you come back to this tab, re-check straight away.
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) refresh();
+    });
 
     // Listen to the database: the page updates by itself when data changes
     function startListening() {
