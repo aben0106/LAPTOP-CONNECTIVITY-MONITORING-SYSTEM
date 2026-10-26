@@ -20,6 +20,7 @@
        Only the Wi-Fi list scrolls (see .list-panel .table-wrap below). */
     html, body { height: 100%; }
     body {
+      background: #F8F5ED;   /* main background colour */
       height: 100vh;
       margin: 0;
       overflow: hidden;
@@ -137,12 +138,13 @@
       cursor: pointer;
     }
     .userbar-actions button:hover { background: #f1f4f8; }
+    /* the Add Student button: maroon, turning light maroon on hover */
     .userbar-actions button.primary {
-      border-color: #2f6fed;
-      background: #2f6fed;
+      border-color: #7A1F35;
+      background: #7A1F35;
       color: #ffffff;
     }
-    .userbar-actions button.primary:hover { background: #2559c9; }
+    .userbar-actions button.primary:hover { background: #A0455A; border-color: #A0455A; }
     /* icon inside a button: exactly as tall as the text line, so the button height does not change */
     .btn-icon {
       height: 24px;
@@ -390,7 +392,9 @@
           <button type="button" id="manageRoutersBtn">
             <img src="wifi-router.png" alt="" class="btn-icon">Manage Wi-fi Routers
           </button>
-          <button type="button" id="manageStaffBtn" hidden>Manage Staff</button>
+          <button type="button" id="manageStaffBtn" hidden>
+            <img src="add-student.png" alt="" class="btn-icon">Manage Staff
+          </button>
           <button type="button" id="addStudentBtn" class="primary">
             <img src="add-student.png" alt="" class="btn-icon">Add Student
           </button>
