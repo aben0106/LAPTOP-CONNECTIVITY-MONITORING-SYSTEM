@@ -16,32 +16,61 @@
     }
 
     /* ---------- Page layout: fill the whole screen ---------- */
+    /* The page is exactly as tall as the browser window, so the Chrome tab never scrolls.
+       Only the router list scrolls (see .list-panel .table-wrap below). */
+    html, body { height: 100%; }
     body {
-      min-height: 100vh;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
+      background: #F8F5ED;   /* main background colour */
     }
     main {
       flex: 1;
+      min-height: 0;          /* lets the list shrink and scroll instead of the page */
       display: flex;
       flex-direction: column;
       width: 100%;
       max-width: none;
       margin: 0;
       padding: 20px 24px;
+      box-sizing: border-box;
     }
     #content:not([hidden]) {
       flex: 1;
+      min-height: 0;
       display: flex;
       flex-direction: column;
     }
     .list-panel {
       flex: 1;
+      min-height: 0;
       display: flex;
       flex-direction: column;
-      min-height: 280px;
     }
-    .list-panel .table-wrap { flex: 1; }
+    /* the search bar stays put; only the table area below it scrolls */
+    .list-panel .toolbar { flex: none; }
+    .list-panel .table-wrap {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+    }
+    /* the SSID / Location / BSSID heading stays on top while the rows scroll under it */
+    .list-panel thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #ffffff;
+      box-shadow: inset 0 -1px 0 #e4e7eb;   /* keeps the line under the heading visible */
+    }
+
+    /* very small or short screens: let the whole page scroll again so nothing is cut off */
+    @media (max-width: 700px), (max-height: 520px) {
+      body { height: auto; min-height: 100vh; overflow: auto; }
+      .list-panel .table-wrap { max-height: 60vh; }
+    }
     /* make sure nothing in dashboard-styles.css keeps these narrow */
     .panel, .legend {
       width: 100%;
@@ -94,12 +123,13 @@
       cursor: pointer;
     }
     .userbar-actions button:hover { background: #f1f4f8; }
+    /* the Add Router button: light maroon */
     .userbar-actions button.primary {
-      border-color: #2f6fed;
-      background: #2f6fed;
+      border-color: #A0455A;
+      background: #A0455A;
       color: #ffffff;
     }
-    .userbar-actions button.primary:hover { background: #2559c9; }
+    .userbar-actions button.primary:hover { background: #8A3548; border-color: #8A3548; }
     .userbar-who { text-align: left; }
     .userbar-name { font-size: 16px; font-weight: 700; }
     .userbar-role { margin-top: 2px; font-size: 13px; color: #52606d; }
