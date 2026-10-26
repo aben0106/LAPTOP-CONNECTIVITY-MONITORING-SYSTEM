@@ -1,0 +1,11 @@
+--background: #080d1a;
+--box: #0f1628;
+--muted-box: #131929;
+--border: #1e2a3a;
+
+--text: #cdd6f4;
+--muted-text: #6c7086;
+
+--cyan: #89dceb;
+--blue: #89b4fa;
+--dark-on-accent: #080d1a;

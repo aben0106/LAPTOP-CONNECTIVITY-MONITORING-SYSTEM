@@ -1,0 +1,43 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "admin": {
+      ".read": "root.child('admin').child(auth.uid).exists()",
+      ".write": "root.child('admin').child(auth.uid).exists()"
+    },
+
+    "staff": {
+      ".read": "root.child('admin').child(auth.uid).exists()",
+      "$uid": {
+        ".read": "auth.uid === $uid",
+        ".write": "root.child('admin').child(auth.uid).exists()"
+      }
+    },
+
+    "student": {
+      ".read": "root.child('admin').child(auth.uid).exists() || root.child('staff').child(auth.uid).exists()",
+      ".write": "root.child('admin').child(auth.uid).exists() || root.child('staff').child(auth.uid).exists()"
+    },
+
+    "laptop": {
+  ".read": "root.child('admin').child(auth.uid).exists() || root.child('staff').child(auth.uid).exists() || auth.uid === 'VQMDTFqlGhZYMJ05VCm8In5spkb2'",
+  ".write": "root.child('admin').child(auth.uid).exists() || root.child('staff').child(auth.uid).exists()"
+},
+    "router": {
+      ".read": "root.child('admin').child(auth.uid).exists() || root.child('staff').child(auth.uid).exists() || auth.uid === 'VQMDTFqlGhZYMJ05VCm8In5spkb2'",
+      ".write": "root.child('admin').child(auth.uid).exists() || root.child('staff').child(auth.uid).exists()"
+    },
+
+    "agent": {
+      ".read": "root.child('admin').child(auth.uid).exists() || root.child('staff').child(auth.uid).exists()",
+      "$laptopId": {
+        ".write": "auth.uid === 'VQMDTFqlGhZYMJ05VCm8In5spkb2'"
+      }
+    }
+  }
+}
+
+
+this is the rule change everything we need to change
