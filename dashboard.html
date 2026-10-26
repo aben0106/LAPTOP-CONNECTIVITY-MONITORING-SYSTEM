@@ -5,36 +5,73 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard | Laptop Monitoring</title>
   <link rel="stylesheet" href="dashboard-styles.css">
+  <!-- Font: DM Sans, the same as the login page -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap">
   <style>
+    /* ---------- Font: DM Sans everywhere (same as index.html) ---------- */
+    body, button, input, select, textarea, h1, h2, table, th, td, .mono, .pill {
+      font-family: "DM Sans", "Segoe UI", Arial, sans-serif;
+    }
+
     /* ---------- Page layout: fill the whole screen ---------- */
+    /* The page is exactly as tall as the browser window, so the Chrome tab never scrolls.
+       Only the Wi-Fi list scrolls (see .list-panel .table-wrap below). */
+    html, body { height: 100%; }
     body {
-      min-height: 100vh;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
     }
     main {
       flex: 1;
+      min-height: 0;          /* lets the list shrink and scroll instead of the page */
       display: flex;
       flex-direction: column;
       width: 100%;
       max-width: none;
       margin: 0;
       padding: 20px 24px;
+      box-sizing: border-box;
     }
     /* the dashboard content stretches to the bottom of the screen */
     #content:not([hidden]) {
       flex: 1;
+      min-height: 0;
       display: flex;
       flex-direction: column;
     }
-    /* the list (with the search bar) takes all the free space between the cards and the legend */
+    /* the Wi-Fi list takes all the free space between the account bar and the legend */
     .list-panel {
       flex: 1;
+      min-height: 0;
       display: flex;
       flex-direction: column;
-      min-height: 280px;
     }
-    .list-panel .table-wrap { flex: 1; }
+    /* the search bar stays put; only the table area below it scrolls */
+    .list-panel .toolbar { flex: none; }
+    .list-panel .table-wrap {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+    }
+    /* the Location / SSID / BSSID heading stays on top while the rows scroll under it */
+    .list-panel thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #ffffff;
+      box-shadow: inset 0 -1px 0 #e4e7eb;   /* keeps the line under the heading visible */
+    }
+
+    /* very small or short screens: let the whole page scroll again so nothing is cut off */
+    @media (max-width: 700px), (max-height: 520px) {
+      body { height: auto; min-height: 100vh; overflow: auto; }
+      .list-panel .table-wrap { max-height: 60vh; }
+    }
     /* make sure nothing in dashboard-styles.css keeps these narrow */
     .panel, .legend {
       width: 100%;
@@ -43,38 +80,7 @@
       margin-right: 0;
       box-sizing: border-box;
     }
-
-    /* ---------- KPI cards ---------- */
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin: 0 auto 20px;   /* auto = the cards stay in the middle */
-      width: 100%;
-      max-width: 1100px;     /* the cards stay this narrow; change the number to resize them */
-    }
-    .card {
-      padding: 18px 20px;
-      background: #ffffff;
-      border-radius: 12px;
-      border-left: 6px solid #9aa5b1;
-      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
-      cursor: pointer;
-      text-align: left;
-      font: inherit;
-      color: inherit;
-    }
-    .card:hover { box-shadow: 0 6px 22px rgba(0, 0, 0, 0.12); }
-    .card.active { outline: 2px solid #2f6fed; }
-    .card.online.active  { outline-color: #27ae60; }
-    .card.away.active    { outline-color: #f39c12; }
-    .card.offline.active { outline-color: #e74c3c; }
-    .card .label { font-size: 13px; font-weight: 600; color: #52606d; }
-    .card .count { margin-top: 6px; font-size: 32px; font-weight: 700; }
-    .card.all     { border-left-color: #2f6fed; }
-    .card.online  { border-left-color: #27ae60; }
-    .card.away    { border-left-color: #f39c12; }
-    .card.offline { border-left-color: #e74c3c; }
+    .panel-title { margin: 0 0 12px; font-size: 16px; text-align: center; }
 
     /* ---------- Clock in the top banner ---------- */
     header {
@@ -83,6 +89,14 @@
       justify-content: space-between;
       gap: 16px;
       flex-wrap: wrap;
+    }
+    /* MSU logo on the far left of the top banner, beside the title */
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand h1 { margin: 0; }
+    .header-logo {
+      height: 48px;    /* change this number to make the logo bigger or smaller */
+      width: auto;
+      flex: none;
     }
     .clock { text-align: right; margin-left: auto; }
     .clock-time {
@@ -93,7 +107,7 @@
     }
     .clock-date { font-size: 13px; opacity: 0.85; }
 
-    /* ---------- Account bar (below the cards) ---------- */
+    /* ---------- Account bar ---------- */
     .userbar {
       display: flex;
       flex-wrap: wrap;
@@ -110,6 +124,10 @@
     }
     .userbar-actions { display: flex; flex-wrap: wrap; gap: 10px; }
     .userbar-actions button {
+      display: inline-flex;   /* icon and text sit side by side, centered */
+      align-items: center;
+      gap: 8px;
+      line-height: 24px;      /* every button is the same height, with or without an icon */
       padding: 9px 16px;
       font-size: 14px;
       font-weight: 600;
@@ -125,11 +143,18 @@
       color: #ffffff;
     }
     .userbar-actions button.primary:hover { background: #2559c9; }
+    /* icon inside a button: exactly as tall as the text line, so the button height does not change */
+    .btn-icon {
+      height: 24px;
+      width: auto;
+      flex: none;
+      display: block;
+    }
     .userbar-who { text-align: left; }
     .userbar-name { font-size: 16px; font-weight: 700; }
     .userbar-role { margin-top: 2px; font-size: 13px; color: #52606d; }
 
-    /* ---------- Search + table ---------- */
+    /* ---------- Search + Wi-Fi table ---------- */
     .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
     #search {
       flex: 1;
@@ -145,8 +170,10 @@
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e4e7eb; }
     th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: #52606d; }
-    th.action-col, td.action-col { text-align: right; width: 1%; white-space: nowrap; }
-    tbody tr:hover { background: #f7f9fc; }
+    tbody tr.clickable { cursor: pointer; }
+    tbody tr.clickable:hover { background: #eef3ff; }
+    td.mono { font-size: 13px; }
+    td.open-col { text-align: right; color: #2f6fed; font-weight: 600; white-space: nowrap; }
     .pill {
       display: inline-block;
       padding: 3px 10px;
@@ -160,22 +187,7 @@
     .pill.offline { background: #e74c3c; }
     .empty { padding: 24px; text-align: center; color: #52606d; }
 
-    /* ---------- Edit button ---------- */
-    .edit-btn {
-      padding: 4px 12px;
-      font-size: 13px;
-      border: 1px solid #cbd2d9;
-      border-radius: 6px;
-      background: #ffffff;
-      cursor: pointer;
-    }
-    .edit-btn:hover { background: #f1f4f8; }
-    .edit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    /* the Delete button sits beside Edit */
-    .edit-btn.danger { margin-left: 6px; color: #c0392b; border-color: #e8b9b3; }
-    .edit-btn.danger:hover { background: #fdf0ee; }
-
-    /* ---------- Edit pop-up ---------- */
+    /* ---------- Pop-ups ---------- */
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -185,6 +197,8 @@
       background: rgba(0, 0, 0, 0.45);
       z-index: 100;
     }
+    /* Edit / Add / Delete open on top of the Wi-Fi pop-up */
+    .modal-backdrop.top { z-index: 200; }
     .modal-backdrop[hidden] { display: none; }
     .modal {
       width: 100%;
@@ -194,6 +208,12 @@
       background: #ffffff;
       border-radius: 12px;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+    }
+    /* the Wi-Fi pop-up is wider and can scroll */
+    .modal.modal-wide {
+      max-width: 760px;
+      max-height: 90vh;
+      overflow-y: auto;
     }
     .modal h2 { margin: 0 0 16px; font-size: 18px; }
     .modal label { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 600; }
@@ -250,6 +270,52 @@
     }
     .modal-actions button:disabled { opacity: 0.6; cursor: not-allowed; }
 
+    /* ---------- Wi-Fi pop-up ---------- */
+    .wifi-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .wifi-head h2 { margin: 0; }
+    .wifi-sub { margin-top: 4px; font-size: 13px; color: #52606d; }
+    .close-x {
+      flex: none;
+      width: 34px;
+      height: 34px;
+      border: 1px solid #cbd2d9;
+      border-radius: 8px;
+      background: #ffffff;
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .close-x:hover { background: #f1f4f8; }
+    .results-info { margin: 0 0 10px; font-size: 13px; color: #52606d; }
+    .link-btn {
+      padding: 0;
+      margin-bottom: 14px;
+      border: none;
+      background: none;
+      color: #2f6fed;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .link-btn:hover { text-decoration: underline; }
+    /* student details: label on the left, value on the right */
+    .details {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 10px 16px;
+      margin: 0 0 20px;
+      font-size: 14px;
+    }
+    .details dt { font-weight: 600; color: #52606d; }
+    .details dd { margin: 0; overflow-wrap: anywhere; }
+
     /* ---------- Legend banner (bottom of the dashboard) ---------- */
     .legend {
       display: flex;
@@ -288,14 +354,18 @@
     .dot.away    { background: #f39c12; }
     .dot.offline { background: #e74c3c; }
 
-    @media (max-width: 700px) {
-      .cards { grid-template-columns: repeat(2, 1fr); }
+    @media (max-width: 600px) {
+      .details { grid-template-columns: 1fr; gap: 2px; }
+      .details dd { margin-bottom: 8px; }
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>MSU - Laptop Connectivity Monitoring</h1>
+    <div class="brand">
+      <img src="msu-logo.png" alt="Mindanao State University logo" class="header-logo">
+      <h1>MSU - Laptop Connectivity Monitoring System</h1>
+    </div>
     <div class="clock">
       <div class="clock-time" id="clockTime">--:--:--</div>
       <div class="clock-date" id="clockDate"></div>
@@ -310,26 +380,6 @@
     </div>
 
     <div id="content" hidden>
-      <!-- Four KPI cards. Click one to filter the list by that status. -->
-      <div class="cards">
-        <button class="card all active" data-filter="all">
-          <div class="label">All Devices</div>
-          <div class="count" id="countAll">0</div>
-        </button>
-        <button class="card online" data-filter="online">
-          <div class="label">Online</div>
-          <div class="count" id="countOnline">0</div>
-        </button>
-        <button class="card away" data-filter="away">
-          <div class="label">Away</div>
-          <div class="count" id="countAway">0</div>
-        </button>
-        <button class="card offline" data-filter="offline">
-          <div class="label">Offline</div>
-          <div class="count" id="countOffline">0</div>
-        </button>
-      </div>
-
       <!-- Account bar: who is logged in on the left, buttons on the right -->
       <div class="userbar">
         <div class="userbar-who">
@@ -337,29 +387,31 @@
           <div class="userbar-role" id="barRole"></div>
         </div>
         <div class="userbar-actions">
-          <button type="button" id="manageRoutersBtn">Manage Wi-fi Routers</button>
+          <button type="button" id="manageRoutersBtn">
+            <img src="wifi-router.png" alt="" class="btn-icon">Manage Wi-fi Routers
+          </button>
           <button type="button" id="manageStaffBtn" hidden>Manage Staff</button>
-          <button type="button" id="addStudentBtn" class="primary">Add Student</button>
+          <button type="button" id="addStudentBtn" class="primary">
+            <img src="add-student.png" alt="" class="btn-icon">Add Student
+          </button>
         </div>
       </div>
 
+      <!-- List of university Wi-Fi. Click one to search the students connected to it. -->
       <div class="panel list-panel">
+        <h2 class="panel-title">MSU Main Campus' Wi-Fi Routers</h2>
         <div class="toolbar">
-          <input type="search" id="search" placeholder="Search by student name, ID number, or laptop serial number...">
+          <input type="search" id="search" placeholder="Search by location, SSID, or BSSID...">
           <span id="resultCount"></span>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Student</th>
-                <th>ID Number</th>
-                <th>Laptop Serial</th>
-                <th>Status</th>
-                <th>Connected To</th>
-                <th>IP Address</th>
-                <th>Last Seen</th>
-                <th class="action-col"></th>
+                <th>Location</th>
+                <th>SSID</th>
+                <th>BSSID</th>
+                <th></th>
               </tr>
             </thead>
             <tbody id="tableBody"></tbody>
@@ -387,8 +439,53 @@
     </div>
   </main>
 
+  <!-- Wi-Fi pop-up: search the students on this Wi-Fi, then see one student's details -->
+  <div class="modal-backdrop" id="wifiModal" hidden>
+    <div class="modal modal-wide">
+      <div class="wifi-head">
+        <div>
+          <h2 id="wifiTitle"></h2>
+          <div class="wifi-sub" id="wifiSub"></div>
+        </div>
+        <button type="button" class="close-x" id="wifiClose" aria-label="Close">&times;</button>
+      </div>
+
+      <!-- Step 1: search (runs only when Enter is pressed) -->
+      <div id="wifiSearchView">
+        <form id="wifiSearchForm">
+          <input type="search" id="wifiSearch"
+                 placeholder="Type a name, ID number, serial number or IP address, then press Enter">
+        </form>
+        <p class="hint">
+          Shows the students whose laptop last reported from this Wi-Fi.
+          Press Enter with the box empty to see all of them.
+        </p>
+        <div id="wifiResults"></div>
+      </div>
+
+      <!-- Step 2: one student's details -->
+      <div id="wifiDetailView" hidden>
+        <button type="button" class="link-btn" id="backToResults">&lsaquo; Back to results</button>
+        <dl class="details">
+          <dt>Student</dt>       <dd id="dName"></dd>
+          <dt>ID number</dt>     <dd id="dIdNum"></dd>
+          <dt>Laptop serial</dt> <dd id="dSerial" class="mono"></dd>
+          <dt>Processor</dt>     <dd id="dProcessor"></dd>
+          <dt>Status</dt>        <dd id="dStatus"></dd>
+          <dt>Connected to</dt>  <dd id="dConnected"></dd>
+          <dt>IP address</dt>    <dd id="dIp" class="mono"></dd>
+          <dt>Last seen</dt>     <dd id="dLastSeen" class="mono"></dd>
+        </dl>
+        <div class="modal-actions">
+          <button type="button" class="danger" id="detailDelete">Delete</button>
+          <button type="button" class="primary" id="detailEdit">Edit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Edit student pop-up -->
-  <div class="modal-backdrop" id="editModal" hidden>
+  <div class="modal-backdrop top" id="editModal" hidden>
     <form class="modal" id="editForm">
       <h2>Edit Student</h2>
 
@@ -424,7 +521,7 @@
   </div>
 
   <!-- Add student pop-up -->
-  <div class="modal-backdrop" id="addModal" hidden>
+  <div class="modal-backdrop top" id="addModal" hidden>
     <form class="modal" id="addForm">
       <h2>Add Student</h2>
 
@@ -463,7 +560,7 @@
   </div>
 
   <!-- Delete student confirmation pop-up -->
-  <div class="modal-backdrop" id="deleteModal" hidden>
+  <div class="modal-backdrop top" id="deleteModal" hidden>
     <div class="modal">
       <h2>Delete Student</h2>
       <p id="deleteText"></p>
@@ -481,13 +578,18 @@
       onAuthStateChanged,
       signOut
     } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-    import { ref, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+    import {
+      ref, get, onValue, update, query, orderByChild, equalTo, limitToFirst
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 
-    // ---- SETTING ----
+    // ---- SETTINGS ----
     // If a laptop has not reported for this many minutes, we call it "offline"
     // (a laptop that is turned off cannot send anything).
     // Set to 0 to turn this rule off (useful when testing with the sample data).
     const OFFLINE_AFTER_MINUTES = 2;
+
+    // The most students shown in one search result (type more to narrow it down)
+    const MAX_RESULTS = 100;
     // -----------------
 
     const statusEl = document.getElementById("status");
@@ -557,13 +659,8 @@
       return null;
     }
 
-    // ---------- Data ----------
-    let students = {};
-    let laptops = {};
-    let agents = {};
-    let rows = [];               // the combined list (one row per laptop)
-    let statusFilter = "all";    // all / online / away / offline
-    let me = null;               // who is logged in: { uid, role, adminId }
+    // ---------- Small helpers ----------
+    let me = null;   // who is logged in: { uid, role, adminId }
 
     // Work out the status of one laptop from its agent record
     function getStatus(agent) {
@@ -593,125 +690,72 @@
       return isNaN(date) ? "-" : date.toLocaleString();
     }
 
-    // Join laptop + student + agent into one list
-    function buildRows() {
-      rows = Object.keys(laptops).map((laptopId) => {
-        const laptop = laptops[laptopId];
-        const student = students[laptop.studentId];
-        const agent = agents[laptopId];
-        return {
-          laptopId: laptopId,                             // needed by the Edit button
-          studentId: student ? laptop.studentId : null,   // needed by the Edit button
-          name: fullName(student),
-          idNumber: student ? student.student_idnum : "-",
-          serial: laptop.serial_number || "-",
-          status: getStatus(agent),
-          connectedTo: agent ? (agent.ssid || agent.location || "-") : "-",
-          location: agent ? (agent.location || "") : "",
-          ip: agent ? (agent.ip_address || "-") : "-",
-          lastSeen: agent ? agent.timestamp : null
-        };
-      });
-      rows.sort((a, b) => a.name.localeCompare(b.name));
+    function makePill(status) {
+      const pill = document.createElement("span");
+      pill.className = "pill " + status;
+      pill.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+      return pill;
     }
 
-    // ---------- Drawing the page ----------
-    function updateCards() {
-      const counts = { online: 0, away: 0, offline: 0 };
-      rows.forEach((row) => counts[row.status]++);
-      document.getElementById("countAll").textContent = rows.length;
-      document.getElementById("countOnline").textContent = counts.online;
-      document.getElementById("countAway").textContent = counts.away;
-      document.getElementById("countOffline").textContent = counts.offline;
+    function permissionMessage(error, action) {
+      return String(error.code || error.message).includes("PERMISSION_DENIED")
+        ? "You do not have permission to " + action + ". Check the Firebase rules."
+        : "Something went wrong. Please try again.";
     }
 
-    function updateTable() {
+    // ---------- The Wi-Fi list (the only thing the dashboard loads at the start) ----------
+    let routers = [];   // [{ key, location, ssid, bssid }]
+
+    function updateRouterTable() {
       const text = searchEl.value.trim().toLowerCase();
-
-      const shown = rows.filter((row) => {
-        if (statusFilter !== "all" && row.status !== statusFilter) return false;
-        if (!text) return true;
-        const haystack = (row.name + " " + row.idNumber + " " + row.serial).toLowerCase();
-        return haystack.includes(text);
-      });
+      const shown = routers.filter((r) =>
+        !text || (r.location + " " + r.ssid + " " + r.bssid).toLowerCase().includes(text)
+      );
 
       tableBody.textContent = "";
 
       if (shown.length === 0) {
         const tr = document.createElement("tr");
         const td = document.createElement("td");
-        td.colSpan = 8;
+        td.colSpan = 4;
         td.className = "empty";
-        td.textContent = rows.length === 0 ? "No laptops in the database yet." : "No matching laptops found.";
+        td.textContent = routers.length === 0
+          ? "No Wi-Fi registered yet. Add one in Manage Wi-fi Routers."
+          : "No matching Wi-Fi found.";
         tr.appendChild(td);
         tableBody.appendChild(tr);
       }
 
-      shown.forEach((row) => {
+      shown.forEach((router) => {
         const tr = document.createElement("tr");
+        tr.className = "clickable";
 
-        const connected = row.location && row.connectedTo !== row.location
-          ? row.connectedTo + " (" + row.location + ")"
-          : row.connectedTo;
+        const locationTd = document.createElement("td");
+        locationTd.textContent = router.location || "-";
+        tr.appendChild(locationTd);
 
-        [row.name, row.idNumber, row.serial].forEach((value) => {
-          const td = document.createElement("td");
-          td.textContent = value;
-          tr.appendChild(td);
-        });
+        const ssidTd = document.createElement("td");
+        ssidTd.textContent = router.ssid || "-";
+        tr.appendChild(ssidTd);
 
-        const statusTd = document.createElement("td");
-        const pill = document.createElement("span");
-        pill.className = "pill " + row.status;
-        pill.textContent = row.status.charAt(0).toUpperCase() + row.status.slice(1);
-        statusTd.appendChild(pill);
-        tr.appendChild(statusTd);
+        const bssidTd = document.createElement("td");
+        bssidTd.className = "mono";
+        bssidTd.textContent = router.bssid || "-";
+        tr.appendChild(bssidTd);
 
-        [connected, row.ip, formatTime(row.lastSeen)].forEach((value) => {
-          const td = document.createElement("td");
-          td.textContent = value;
-          tr.appendChild(td);
-        });
+        const openTd = document.createElement("td");
+        openTd.className = "open-col";
+        openTd.textContent = "Search students \u203A";
+        tr.appendChild(openTd);
 
-        // Edit button on the far right of the row
-        const actionTd = document.createElement("td");
-        actionTd.className = "action-col";
-        const editBtn = document.createElement("button");
-        editBtn.type = "button";
-        editBtn.className = "edit-btn";
-        editBtn.textContent = "Edit";
-        if (row.studentId) {
-          editBtn.addEventListener("click", () => openEdit(row.studentId, row.laptopId));
-        } else {
-          editBtn.disabled = true;   // this laptop has no student to edit
-        }
-        actionTd.appendChild(editBtn);
-
-        // Delete button beside Edit
-        const deleteBtn = document.createElement("button");
-        deleteBtn.type = "button";
-        deleteBtn.className = "edit-btn danger";
-        deleteBtn.textContent = "Delete";
-        if (row.studentId) {
-          deleteBtn.addEventListener("click", () => openDelete(row.studentId));
-        } else {
-          deleteBtn.disabled = true;   // this laptop has no student to delete
-        }
-        actionTd.appendChild(deleteBtn);
-
-        tr.appendChild(actionTd);
-
+        tr.addEventListener("click", () => openWifi(router));
         tableBody.appendChild(tr);
       });
 
-      resultCountEl.textContent = "Showing " + shown.length + " of " + rows.length;
+      resultCountEl.textContent = "Showing " + shown.length + " of " + routers.length + " Wi-Fi";
     }
 
-    function refresh() {
-      buildRows();
-      updateCards();
-      updateTable();
-    }
+    searchEl.addEventListener("input", updateRouterTable);
 
     // Account bar buttons
     document.getElementById("manageRoutersBtn").addEventListener("click", () => {
@@ -721,18 +765,226 @@
       window.location.href = "staff.html";
     });
 
-    // Search bar: update the list as the user types
-    searchEl.addEventListener("input", updateTable);
+    // ---------- Wi-Fi pop-up ----------
+    const wifiModalEl = document.getElementById("wifiModal");
+    const wifiTitleEl = document.getElementById("wifiTitle");
+    const wifiSubEl = document.getElementById("wifiSub");
+    const wifiSearchViewEl = document.getElementById("wifiSearchView");
+    const wifiDetailViewEl = document.getElementById("wifiDetailView");
+    const wifiSearchFormEl = document.getElementById("wifiSearchForm");
+    const wifiSearchEl = document.getElementById("wifiSearch");
+    const wifiResultsEl = document.getElementById("wifiResults");
 
-    // KPI cards: click to filter by status
-    document.querySelectorAll(".card").forEach((card) => {
-      card.addEventListener("click", () => {
-        statusFilter = card.dataset.filter;
-        document.querySelectorAll(".card").forEach((c) => c.classList.remove("active"));
-        card.classList.add("active");
-        updateTable();
-      });
+    let currentRouter = null;   // the Wi-Fi that was clicked
+    let currentRecord = null;   // the student shown in the details view
+
+    function showResultsMessage(text) {
+      wifiResultsEl.textContent = "";
+      const p = document.createElement("p");
+      p.className = "results-info";
+      p.textContent = text;
+      wifiResultsEl.appendChild(p);
+    }
+
+    function openWifi(router) {
+      currentRouter = router;
+      currentRecord = null;
+      wifiTitleEl.textContent = router.location || "Wi-Fi";
+      wifiSubEl.textContent = "SSID: " + (router.ssid || "-") + "   |   BSSID: " + router.bssid;
+      wifiSearchEl.value = "";
+      showResultsMessage("Type in the box and press Enter to search.");
+      wifiDetailViewEl.hidden = true;
+      wifiSearchViewEl.hidden = false;
+      wifiModalEl.hidden = false;
+      wifiSearchEl.focus();
+    }
+
+    function closeWifi() {
+      wifiModalEl.hidden = true;
+      currentRouter = null;
+      currentRecord = null;
+    }
+
+    document.getElementById("wifiClose").addEventListener("click", closeWifi);
+    wifiModalEl.addEventListener("click", (event) => {
+      if (event.target === wifiModalEl) closeWifi();
     });
+
+    // The search runs ONLY when Enter is pressed (nothing is downloaded while typing)
+    wifiSearchFormEl.addEventListener("submit", (event) => {
+      event.preventDefault();
+      searchWifi();
+    });
+
+    // Find the students whose laptop last reported from this Wi-Fi.
+    // Only these records are downloaded, not the whole student list.
+    async function searchWifi() {
+      if (!currentRouter) return;
+      const router = currentRouter;
+      const text = wifiSearchEl.value.trim().toLowerCase();
+      showResultsMessage("Searching...");
+
+      try {
+        // 1. agent records with this BSSID (needs ".indexOn": ["bssid"] in the agent rule)
+        const agentSnap = await get(query(ref(db, "agent"), orderByChild("bssid"), equalTo(router.bssid)));
+        const agentsHere = agentSnap.val() || {};
+        const laptopIds = Object.keys(agentsHere);
+
+        // 2. their laptop records
+        const laptopList = await Promise.all(laptopIds.map((id) => readOrNull("laptop/" + id)));
+
+        // 3. the students who own those laptops
+        const studentIds = [...new Set(laptopList.filter(Boolean).map((l) => l.studentId).filter(Boolean))];
+        const studentList = await Promise.all(studentIds.map((id) => readOrNull("student/" + id)));
+        const studentMap = {};
+        studentIds.forEach((id, i) => { studentMap[id] = studentList[i]; });
+
+        if (router !== currentRouter) return;   // the pop-up was closed or changed meanwhile
+
+        // 4. put them together and keep the ones that match the search text
+        const found = [];
+        laptopIds.forEach((laptopId, i) => {
+          const laptop = laptopList[i];
+          if (!laptop) return;   // old agent record of a deleted laptop
+          const student = studentMap[laptop.studentId] || null;
+          const agent = agentsHere[laptopId];
+          const record = {
+            laptopId: laptopId,
+            studentId: student ? laptop.studentId : null,
+            student: student,
+            laptop: laptop,
+            agent: agent,
+            name: fullName(student),
+            idNumber: student ? (student.student_idnum || "-") : "-",
+            serial: laptop.serial_number || "-",
+            ip: agent.ip_address || "-",
+            status: getStatus(agent)
+          };
+          const haystack = (record.name + " " + record.idNumber + " " + record.serial + " " + record.ip).toLowerCase();
+          if (!text || haystack.includes(text)) found.push(record);
+        });
+        found.sort((a, b) => a.name.localeCompare(b.name));
+
+        renderResults(found, text);
+      } catch (error) {
+        console.error(error);
+        showResultsMessage(permissionMessage(error, "search students"));
+      }
+    }
+
+    function renderResults(found, text) {
+      wifiResultsEl.textContent = "";
+      const info = document.createElement("p");
+      info.className = "results-info";
+      wifiResultsEl.appendChild(info);
+
+      if (found.length === 0) {
+        info.textContent = text
+          ? "No student matching \"" + text + "\" was found on this Wi-Fi."
+          : "No laptop has reported from this Wi-Fi yet.";
+        return;
+      }
+
+      info.textContent = found.length + " result(s)" +
+        (found.length > MAX_RESULTS ? ", showing the first " + MAX_RESULTS + ". Type more to narrow it down." : ".") +
+        " Click a student to see their details.";
+
+      const table = document.createElement("table");
+      const thead = document.createElement("thead");
+      const headRow = document.createElement("tr");
+      ["Student", "ID Number", "Laptop Serial", "Status"].forEach((h) => {
+        const th = document.createElement("th");
+        th.textContent = h;
+        headRow.appendChild(th);
+      });
+      thead.appendChild(headRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+      found.slice(0, MAX_RESULTS).forEach((record) => {
+        const tr = document.createElement("tr");
+        tr.className = "clickable";
+        [record.name, record.idNumber, record.serial].forEach((value, i) => {
+          const td = document.createElement("td");
+          td.textContent = value;
+          if (i === 2) td.className = "mono";   // the serial number is technical data
+          tr.appendChild(td);
+        });
+        const statusTd = document.createElement("td");
+        statusTd.appendChild(makePill(record.status));
+        tr.appendChild(statusTd);
+
+        tr.addEventListener("click", () => showDetails(record));
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+
+      const wrap = document.createElement("div");
+      wrap.className = "table-wrap";
+      wrap.appendChild(table);
+      wifiResultsEl.appendChild(wrap);
+    }
+
+    // ---------- Student details (inside the Wi-Fi pop-up) ----------
+    function showDetails(record) {
+      currentRecord = record;
+      const agent = record.agent || {};
+
+      document.getElementById("dName").textContent = record.name;
+      document.getElementById("dIdNum").textContent = record.idNumber;
+      document.getElementById("dSerial").textContent = record.serial;
+      document.getElementById("dProcessor").textContent = record.laptop.processor_type || "-";
+
+      const statusDd = document.getElementById("dStatus");
+      statusDd.textContent = "";
+      statusDd.appendChild(makePill(getStatus(record.agent)));
+
+      const ssid = agent.ssid || "-";
+      document.getElementById("dConnected").textContent =
+        agent.location && agent.location !== ssid ? ssid + " (" + agent.location + ")" : ssid;
+      document.getElementById("dIp").textContent = agent.ip_address || "-";
+      document.getElementById("dLastSeen").textContent = formatTime(agent.timestamp);
+
+      // a laptop without a student cannot be edited or deleted from here
+      document.getElementById("detailEdit").disabled = !record.studentId;
+      document.getElementById("detailDelete").disabled = !record.studentId;
+
+      wifiSearchViewEl.hidden = true;
+      wifiDetailViewEl.hidden = false;
+    }
+
+    // Going back runs the same search again, so any edits show up in the list
+    function backToResults() {
+      currentRecord = null;
+      wifiDetailViewEl.hidden = true;
+      wifiSearchViewEl.hidden = false;
+      searchWifi();
+    }
+    document.getElementById("backToResults").addEventListener("click", backToResults);
+
+    document.getElementById("detailEdit").addEventListener("click", () => {
+      if (currentRecord && currentRecord.studentId) openEdit(currentRecord);
+    });
+    document.getElementById("detailDelete").addEventListener("click", () => {
+      if (currentRecord && currentRecord.studentId) openDelete(currentRecord);
+    });
+
+    // ---------- Duplicate checks (look up only the matching records) ----------
+    // Is this ID number used by another student? (".indexOn": ["student_idnum"])
+    async function idNumberTaken(idnum, exceptStudentId) {
+      const snap = await get(query(ref(db, "student"), orderByChild("student_idnum"), equalTo(idnum)));
+      return Object.keys(snap.val() || {}).some((id) => id !== exceptStudentId);
+    }
+
+    // Is this serial number used by another laptop? (".indexOn": ["serial_number"])
+    async function serialTaken(serial, exceptLaptopId) {
+      const versions = [...new Set([serial, serial.toUpperCase(), serial.toLowerCase()])];
+      for (const value of versions) {
+        const snap = await get(query(ref(db, "laptop"), orderByChild("serial_number"), equalTo(value)));
+        if (Object.keys(snap.val() || {}).some((id) => id !== exceptLaptopId)) return true;
+      }
+      return false;
+    }
 
     // ---------- Edit student pop-up ----------
     const modalEl = document.getElementById("editModal");
@@ -746,14 +998,14 @@
     const errorEl = document.getElementById("editError");
     const saveBtn = document.getElementById("editSave");
     let editingId = null;         // the student being edited
-    let editingLaptopId = null;   // their laptop on this row
+    let editingLaptopId = null;   // their laptop
 
-    function openEdit(studentId, laptopId) {
-      const student = students[studentId];
+    function openEdit(record) {
+      const student = record.student;
       if (!student) return;
-      const laptop = laptops[laptopId] || {};
-      editingId = studentId;
-      editingLaptopId = laptopId;
+      const laptop = record.laptop || {};
+      editingId = record.studentId;
+      editingLaptopId = record.laptopId;
 
       firstEl.value = student.firstname || "";
       middleEl.value = student.middlename || "";
@@ -785,12 +1037,13 @@
       if (event.target === modalEl) closeEdit();
     });
 
-    // Press Esc to close whichever pop-up is open
+    // Press Esc to close the pop-up on top
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape") return;
-      if (!modalEl.hidden) closeEdit();
-      if (!addModalEl.hidden) closeAdd();
       if (!deleteModalEl.hidden) closeDelete();
+      else if (!modalEl.hidden) closeEdit();
+      else if (!addModalEl.hidden) closeAdd();
+      else if (!wifiModalEl.hidden) closeWifi();
     });
 
     formEl.addEventListener("submit", async (event) => {
@@ -809,49 +1062,54 @@
         return;
       }
 
-      // Do not allow two students with the same ID number
-      const duplicate = Object.keys(students).some((id) =>
-        id !== editingId && String(students[id].student_idnum || "").trim() === idnum
-      );
-      if (duplicate) {
-        errorEl.textContent = "That ID number already belongs to another student.";
-        return;
-      }
-
-      // Do not allow two laptops with the same serial number
-      const duplicateSerial = Object.keys(laptops).some((id) =>
-        id !== editingLaptopId &&
-        String(laptops[id].serial_number || "").trim().toLowerCase() === serial.toLowerCase()
-      );
-      if (duplicateSerial) {
-        errorEl.textContent = "That serial number already belongs to another laptop.";
-        return;
-      }
-
       saveBtn.disabled = true;
-      saveBtn.textContent = "Saving...";
+      saveBtn.textContent = "Checking...";
       errorEl.textContent = "";
 
-      // Save the student details and the laptop details together, in one go
-      const changes = {
-        ["student/" + editingId + "/firstname"]: firstname,
-        ["student/" + editingId + "/middlename"]: middlename,
-        ["student/" + editingId + "/lastname"]: lastname,
-        ["student/" + editingId + "/student_idnum"]: idnum
-      };
-      if (editingLaptopId) {
-        changes["laptop/" + editingLaptopId + "/serial_number"] = serial;
-        changes["laptop/" + editingLaptopId + "/processor_type"] = processor;
-      }
-
       try {
+        // Do not allow two students with the same ID number
+        if (await idNumberTaken(idnum, editingId)) {
+          errorEl.textContent = "That ID number already belongs to another student.";
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Save";
+          return;
+        }
+        // Do not allow two laptops with the same serial number
+        if (await serialTaken(serial, editingLaptopId)) {
+          errorEl.textContent = "That serial number already belongs to another laptop.";
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Save";
+          return;
+        }
+
+        saveBtn.textContent = "Saving...";
+
+        // Save the student details and the laptop details together, in one go
+        const changes = {
+          ["student/" + editingId + "/firstname"]: firstname,
+          ["student/" + editingId + "/middlename"]: middlename,
+          ["student/" + editingId + "/lastname"]: lastname,
+          ["student/" + editingId + "/student_idnum"]: idnum
+        };
+        if (editingLaptopId) {
+          changes["laptop/" + editingLaptopId + "/serial_number"] = serial;
+          changes["laptop/" + editingLaptopId + "/processor_type"] = processor;
+        }
         await update(ref(db), changes);
-        closeEdit();   // the list refreshes by itself when Firebase changes
+
+        // Show the new details straight away
+        if (currentRecord && currentRecord.studentId === editingId) {
+          Object.assign(currentRecord.student, { firstname, middlename, lastname, student_idnum: idnum });
+          Object.assign(currentRecord.laptop, { serial_number: serial, processor_type: processor });
+          currentRecord.name = fullName(currentRecord.student);
+          currentRecord.idNumber = idnum;
+          currentRecord.serial = serial;
+          showDetails(currentRecord);
+        }
+        closeEdit();
       } catch (error) {
         console.error(error);
-        errorEl.textContent = String(error.code || error.message).includes("PERMISSION_DENIED")
-          ? "You do not have permission to edit students. Check the Firebase rules."
-          : "Could not save. Please try again.";
+        errorEl.textContent = permissionMessage(error, "edit students");
         saveBtn.disabled = false;
         saveBtn.textContent = "Save";
       }
@@ -870,10 +1128,20 @@
     const addSaveBtn = document.getElementById("addSave");
 
     // Work out the next id, e.g. S001, S002... or L001, L002...
-    function nextId(existing, letter) {
+    // It downloads only the record KEYS (shallow), not the student details.
+    async function nextId(path, letter) {
+      const token = await auth.currentUser.getIdToken();
+      const url = db.app.options.databaseURL + "/" + path +
+        ".json?shallow=true&auth=" + encodeURIComponent(token);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(response.status === 401 ? "PERMISSION_DENIED" : "HTTP " + response.status);
+      }
+      const keys = Object.keys((await response.json()) || {});
+
       let biggest = 0;
       const pattern = new RegExp("^" + letter + "(\\d+)$");
-      Object.keys(existing).forEach((key) => {
+      keys.forEach((key) => {
         const match = pattern.exec(key);
         if (match) biggest = Math.max(biggest, parseInt(match[1], 10));
       });
@@ -915,56 +1183,53 @@
         return;
       }
 
-      // Do not allow two students with the same ID number
-      const duplicateId = Object.keys(students).some((id) =>
-        String(students[id].student_idnum || "").trim() === idnum
-      );
-      if (duplicateId) {
-        addErrorEl.textContent = "That ID number already belongs to another student.";
-        return;
-      }
-
-      // Do not allow two laptops with the same serial number
-      const duplicateSerial = Object.keys(laptops).some((id) =>
-        String(laptops[id].serial_number || "").trim().toLowerCase() === serial.toLowerCase()
-      );
-      if (duplicateSerial) {
-        addErrorEl.textContent = "That serial number already belongs to another laptop.";
-        return;
-      }
-
       addSaveBtn.disabled = true;
-      addSaveBtn.textContent = "Saving...";
+      addSaveBtn.textContent = "Checking...";
       addErrorEl.textContent = "";
 
-      const studentId = nextId(students, "S");
-      const laptopId = nextId(laptops, "L");
-
-      // Save the student and their laptop together, in one go
-      const changes = {};
-      changes["student/" + studentId] = {
-        adminId: me ? me.adminId : "",
-        firstname: firstname,
-        middlename: middlename,
-        lastname: lastname,
-        student_idnum: idnum
-      };
-      changes["laptop/" + laptopId] = {
-        adminId: me ? me.adminId : "",
-        staffId: (me && me.role === "Staff") ? me.uid : "",
-        studentId: studentId,
-        serial_number: serial,
-        processor_type: processor
-      };
-
       try {
+        // Do not allow two students with the same ID number
+        if (await idNumberTaken(idnum, null)) {
+          addErrorEl.textContent = "That ID number already belongs to another student.";
+          addSaveBtn.disabled = false;
+          addSaveBtn.textContent = "Add Student";
+          return;
+        }
+        // Do not allow two laptops with the same serial number
+        if (await serialTaken(serial, null)) {
+          addErrorEl.textContent = "That serial number already belongs to another laptop.";
+          addSaveBtn.disabled = false;
+          addSaveBtn.textContent = "Add Student";
+          return;
+        }
+
+        addSaveBtn.textContent = "Saving...";
+
+        const studentId = await nextId("student", "S");
+        const laptopId = await nextId("laptop", "L");
+
+        // Save the student and their laptop together, in one go
+        const changes = {};
+        changes["student/" + studentId] = {
+          adminId: me ? me.adminId : "",
+          firstname: firstname,
+          middlename: middlename,
+          lastname: lastname,
+          student_idnum: idnum
+        };
+        changes["laptop/" + laptopId] = {
+          adminId: me ? me.adminId : "",
+          staffId: (me && me.role === "Staff") ? me.uid : "",
+          studentId: studentId,
+          serial_number: serial,
+          processor_type: processor
+        };
+
         await update(ref(db), changes);
-        closeAdd();   // the list refreshes by itself
+        closeAdd();
       } catch (error) {
         console.error(error);
-        addErrorEl.textContent = String(error.code || error.message).includes("PERMISSION_DENIED")
-          ? "You do not have permission to add students. Check the Firebase rules."
-          : "Could not save. Please try again.";
+        addErrorEl.textContent = permissionMessage(error, "add students");
         addSaveBtn.disabled = false;
         addSaveBtn.textContent = "Add Student";
       }
@@ -975,27 +1240,12 @@
     const deleteTextEl = document.getElementById("deleteText");
     const deleteErrorEl = document.getElementById("deleteError");
     const deleteConfirmBtn = document.getElementById("deleteConfirm");
-    let deletingId = null;   // the student being deleted
+    let deletingRecord = null;   // the student being deleted
 
-    // Which laptops belong to this student?
-    function laptopsOf(studentId) {
-      return Object.keys(laptops).filter((id) => laptops[id].studentId === studentId);
-    }
-
-    function openDelete(studentId) {
-      const student = students[studentId];
-      if (!student) return;
-      deletingId = studentId;
-
-      const owned = laptopsOf(studentId);
-      let message = "Are you sure you want to delete " + fullName(student) +
-        " from the system? This cannot be undone.";
-      if (owned.length > 0) {
-        message += " Their laptop record" + (owned.length > 1 ? "s will" : " will") +
-          " be removed as well.";
-      }
-      deleteTextEl.textContent = message;
-
+    function openDelete(record) {
+      deletingRecord = record;
+      deleteTextEl.textContent = "Are you sure you want to delete " + record.name +
+        " from the system? This cannot be undone. Their laptop record will be removed as well.";
       deleteErrorEl.textContent = "";
       deleteConfirmBtn.disabled = false;
       deleteConfirmBtn.textContent = "Delete";
@@ -1004,7 +1254,7 @@
 
     function closeDelete() {
       deleteModalEl.hidden = true;
-      deletingId = null;
+      deletingRecord = null;
     }
 
     document.getElementById("deleteCancel").addEventListener("click", closeDelete);
@@ -1015,44 +1265,82 @@
     });
 
     deleteConfirmBtn.addEventListener("click", async () => {
-      if (!deletingId) return;
+      if (!deletingRecord) return;
       deleteConfirmBtn.disabled = true;
       deleteConfirmBtn.textContent = "Deleting...";
       deleteErrorEl.textContent = "";
 
-      // Remove the student and their laptops together, in one go
+      // Remove the student and their laptop together, in one go
       const changes = {};
-      changes["student/" + deletingId] = null;
-      laptopsOf(deletingId).forEach((id) => { changes["laptop/" + id] = null; });
+      changes["student/" + deletingRecord.studentId] = null;
+      changes["laptop/" + deletingRecord.laptopId] = null;
 
       try {
         await update(ref(db), changes);
-        closeDelete();   // the list refreshes by itself
+        closeDelete();
+        backToResults();   // the deleted student disappears from the results
       } catch (error) {
         console.error(error);
-        deleteErrorEl.textContent = String(error.code || error.message).includes("PERMISSION_DENIED")
-          ? "You do not have permission to delete students. Check the Firebase rules."
-          : "Could not delete. Please try again.";
+        deleteErrorEl.textContent = permissionMessage(error, "delete students");
         deleteConfirmBtn.disabled = false;
         deleteConfirmBtn.textContent = "Delete";
       }
     });
 
-    // Re-check the "offline after X minutes" rule every 15 seconds,
-    // so a laptop that stops reporting turns Offline without refreshing the page.
-    setInterval(refresh, 15000);
+    // ---------- Fill in missing SSIDs from the agents' reports ----------
+    // If a router was saved without an SSID, look at ONE agent report from that
+    // BSSID (the agent sends the Wi-Fi name it is connected to), then save that
+    // SSID into the router record so this lookup only ever happens once.
+    const ssidTried = new Set();   // routers we already looked up on this page
 
-    // Browsers slow down timers in tabs you are not looking at.
-    // When you come back to this tab, re-check straight away.
-    document.addEventListener("visibilitychange", () => {
-      if (!document.hidden) refresh();
-    });
+    async function fillMissingSsids() {
+      const missing = routers.filter((r) => !r.ssid && r.bssid && !ssidTried.has(r.key));
+      await Promise.all(missing.map(async (router) => {
+        ssidTried.add(router.key);
+        try {
+          const snap = await get(query(ref(db, "agent"),
+            orderByChild("bssid"), equalTo(router.bssid), limitToFirst(1)));
+          const report = Object.values(snap.val() || {})[0];
+          if (!report || !report.ssid) return;   // no laptop has reported from this Wi-Fi yet
 
-    // Listen to the database: the page updates by itself when data changes
+          router.ssid = report.ssid;
+          updateRouterTable();
+          // remember it in Firebase so next time it is already there
+          await update(ref(db, "router/" + router.key), { ssid: report.ssid });
+        } catch (error) {
+          console.error("Could not fill the SSID of " + router.bssid, error);
+        }
+      }));
+    }
+
+    // ---------- Start ----------
+    // Only the router list is loaded (it is small). Students are loaded only when searched.
     function startListening() {
-      onValue(ref(db, "student"), (snap) => { students = snap.val() || {}; refresh(); });
-      onValue(ref(db, "laptop"),  (snap) => { laptops  = snap.val() || {}; refresh(); });
-      onValue(ref(db, "agent"),   (snap) => { agents   = snap.val() || {}; refresh(); });
+      onValue(ref(db, "router"), (snap) => {
+        const data = snap.val() || {};
+        routers = Object.keys(data)
+          .filter((key) => data[key] && typeof data[key] === "object")
+          .map((key) => ({
+            key: key,
+            location: data[key].location || "",
+            ssid: data[key].ssid || "",
+            bssid: String(data[key].bssid || key).trim().toLowerCase()
+          }));
+        routers.sort((a, b) => a.location.localeCompare(b.location) || a.bssid.localeCompare(b.bssid));
+        updateRouterTable();
+        fillMissingSsids();
+      }, (error) => {
+        console.error(error);
+        resultCountEl.textContent = "";
+        tableBody.textContent = "";
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 4;
+        td.className = "empty";
+        td.textContent = "Could not load the Wi-Fi list. Check the Firebase rules for router.";
+        tr.appendChild(td);
+        tableBody.appendChild(tr);
+      });
     }
 
     onAuthStateChanged(auth, async (user) => {

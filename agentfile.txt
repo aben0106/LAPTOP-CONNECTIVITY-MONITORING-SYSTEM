@@ -1,0 +1,25 @@
+AGENT_EMAIL = "testagent@gmail.com"        # the agent's Firebase login (not the admin's)
+AGENT_PASSWORD = "MSUAGENT123!!!"
+
+netsh wlan show interfaces - to get the bssid of a wifi
+
+
+how to install the msu-agent.exe to another laptop 
+
+1. Get the laptop’s serial number. On the new laptop, open PowerShell and run:
+
+(Get-CimInstance Win32_BIOS).SerialNumber
+
+2. Register it on the dashboard. Click Add Student and enter the student’s details with that exact serial number. Without this, the agent runs but sends nothing.
+
+3. Copy the .exe. Take msu-agent.exe from the dist folder (not build, and not a shortcut). Use a USB flash drive or a Google Drive link shared with a specific email; Gmail blocks .exe files.
+
+4. Put it in its own folder on the new laptop, for example C:\MSU-Agent.
+
+5. Turn on Location services. In Settings → Privacy & security → Location, turn on both Location services and Let desktop apps access your location. Otherwise the BSSID is hidden and the laptop shows as Away.
+
+6. Run the .exe. If “Windows protected your PC” appears, click More info → Run anyway. If there’s no Run anyway button, temporarily turn off Windows Security → App & browser control → Reputation-based protection → Check apps and files, run it, then turn it back on.
+
+7. Confirm it’s running. Open Task Manager (Ctrl + Shift + Esc) and look for msu-agent.exe. The laptop should appear on the dashboard within about 30 seconds.
+
+8. Make it start automatically. Right-click the .exe → Create shortcut. Press Win + R, type shell:startup, press Enter, and move the shortcut into that folder. Restart the laptop to check it starts by itself.

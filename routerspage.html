@@ -5,7 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Manage Router | Laptop Monitoring</title>
   <link rel="stylesheet" href="dashboard-styles.css">
+  <!-- Font: DM Sans, the same as the login page and the dashboard -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap">
   <style>
+    /* ---------- Font: DM Sans everywhere (same as index.html and dashboard.html) ---------- */
+    body, button, input, select, textarea, h1, h2, table, th, td, .mono {
+      font-family: "DM Sans", "Segoe UI", Arial, sans-serif;
+    }
+
     /* ---------- Page layout: fill the whole screen ---------- */
     body {
       min-height: 100vh;
@@ -112,7 +121,7 @@
     th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e4e7eb; }
     th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: #52606d; }
     th.action-col, td.action-col { text-align: right; width: 1%; white-space: nowrap; }
-    td.mono { font-family: ui-monospace, Consolas, "Courier New", monospace; }
+    td.mono { font-size: 13px; }
     tbody tr:hover { background: #f7f9fc; }
     .empty { padding: 24px; text-align: center; color: #52606d; }
 
